@@ -1,0 +1,167 @@
+openapi: 3.0.0
+info:
+  title: Tanscrow Backend API
+  description: |
+    API documentation for Tanscrow Backend service.
+    This API provides functionality for user management, transactions, escrow services, and more.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:4000
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phoneNumber:
+          type: string
+        profileImageUrl:
+          type: string
+        accountType:
+          type: string
+          enum: [BUYER, SELLER]
+        verified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, COMPLETED, CANCELLED, DISPUTED]
+        escrowStatus:
+          type: string
+          enum: [FUNDED, RELEASED, REFUNDED]
+        amount:
+          type: number
+          format: float
+        paymentCurrency:
+          type: string
+        deliveryMethod:
+          type: string
+          enum: [PHYSICAL, DIGITAL]
+        buyer:
+          $ref: "#/components/schemas/User"
+        seller:
+          $ref: "#/components/schemas/User"
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+paths:
+  /graphql:
+    post:
+      security:
+        - BearerAuth: []
+      description: GraphQL endpoint that handles all API operations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                variables:
+                  type: object
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                  errors:
+                    type: array
+                    items:
+                      type: object
+
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                phoneNumber:
+                  type: string
+      responses:
+        "200":
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/signin:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate user and get token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
