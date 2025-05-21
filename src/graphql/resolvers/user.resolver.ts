@@ -22,20 +22,31 @@ import {
   TokenType,
 } from "../../generated/prisma-client";
 import bcrypt from "bcryptjs";
+import { Dispute } from "../types/dispute.type";
+import { BadRequestException } from "../../utils/appError";
+import { ErrorCodeEnum } from "../../enums/error-code.enum";
 
 @Resolver()
 export class UserResolver {
+  // --- Queries ---
   @Query(() => User, { nullable: true, description: "Get current user" })
   @UseMiddleware(isAuthenticated)
   async me(@Ctx() { user }: GraphQLContext): Promise<User | null> {
-    return user;
+    if (!user?.id) return null;
+
+    const fullUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        providers: true,
+      },
+    });
+
+    return fullUser;
   }
 
   @Query(() => User, { nullable: true, description: "Find user by id" })
   async user(@Arg("id") id: string): Promise<User | null> {
-    return prisma.user.findUnique({
-      where: { id },
-    });
+    return prisma.user.findUnique({ where: { id } });
   }
 
   @Query(() => [User], { description: "Fetch all users" })
@@ -44,6 +55,7 @@ export class UserResolver {
     return prisma.user.findMany();
   }
 
+  // --- Mutations ---
   @Mutation(() => User, { description: "User updating their profile" })
   @UseMiddleware(isAuthenticated)
   async updateProfile(
@@ -53,6 +65,18 @@ export class UserResolver {
     return prisma.user.update({
       where: { id: user?.id },
       data: input,
+    });
+  }
+
+  @Mutation(() => User, { description: "Update user's profile image URL" })
+  @UseMiddleware(isAuthenticated)
+  async updateProfileImage(
+    @Arg("profileImageUrl") profileImageUrl: string,
+    @Ctx() { user }: GraphQLContext
+  ): Promise<User> {
+    return prisma.user.update({
+      where: { id: user?.id },
+      data: { profileImageUrl },
     });
   }
 
@@ -66,18 +90,14 @@ export class UserResolver {
       where: { id: user?.id },
     });
 
-    if (!currentUser) {
-      throw new Error("User not found");
-    }
+    if (!currentUser) throw new Error("User not found");
 
     const isPasswordValid = await bcrypt.compare(
       input.currentPassword,
       currentUser.password
     );
 
-    if (!isPasswordValid) {
-      throw new Error("Current password is incorrect");
-    }
+    if (!isPasswordValid) throw new Error("Current password is incorrect");
 
     const hashedPassword = await bcrypt.hash(input.newPassword, 10);
 
@@ -100,11 +120,8 @@ export class UserResolver {
       include: { providers: true },
     });
 
-    if (!currentUser) {
-      throw new Error("User not found");
-    }
+    if (!currentUser) throw new Error("User not found");
 
-    // Check if user's primary provider is phone
     const hasPhoneProvider = currentUser.providers.some(
       (p: Provider) => p.provider === ProviderType.PHONE
     );
@@ -115,18 +132,14 @@ export class UserResolver {
       );
     }
 
-    // Check if email is already in use
     const existingEmail = await prisma.user.findUnique({
       where: { email: input.email },
     });
 
-    if (existingEmail) {
-      throw new Error("Email is already in use");
-    }
+    if (existingEmail) throw new Error("Email is already in use");
 
     const hashedPassword = await bcrypt.hash(input.password, 10);
 
-    // Add email provider and update user
     return prisma.user.update({
       where: { id: user?.id },
       data: {
@@ -156,11 +169,8 @@ export class UserResolver {
       include: { providers: true },
     });
 
-    if (!currentUser) {
-      throw new Error("User not found");
-    }
+    if (!currentUser) throw new Error("User not found");
 
-    // Check if user's primary provider is email
     const hasEmailProvider = currentUser.providers.some(
       (p: Provider) => p.provider === ProviderType.EMAIL
     );
@@ -171,32 +181,28 @@ export class UserResolver {
       );
     }
 
-    // Check if phone is already in use
     const existingPhone = await prisma.user.findUnique({
       where: { phoneNumber: input.phoneNumber },
     });
 
-    if (existingPhone) {
-      throw new Error("Phone number is already in use");
-    }
+    if (existingPhone) throw new Error("Phone number is already in use");
 
     const hashedPassword = await bcrypt.hash(input.password, 10);
 
-    // Generate OTP for phone verification
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpToken = await prisma.verificationToken.create({
+
+    await prisma.verificationToken.create({
       data: {
         userId: user?.id as string,
         type: TokenType.PHONE_OTP,
         token: otp,
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
       },
     });
 
-    // TODO: Send OTP via SMS
+    // Send OTP via SMS (integration pending)
     console.log(`Phone verification OTP: ${otp}`);
 
-    // Add phone provider and update user
     return prisma.user.update({
       where: { id: user?.id },
       data: {
@@ -210,6 +216,25 @@ export class UserResolver {
         },
       },
       include: { providers: true },
+    });
+  }
+
+  @Query(() => User, {
+    nullable: true,
+    description: "Find user by email adress or phone number",
+  })
+  async searchUser(@Arg("input") input: string): Promise<User | null> {
+    if (!input) {
+      throw new BadRequestException(
+        "Please enter either an email adress or phone number!",
+        ErrorCodeEnum.INVALID_INPUT
+      );
+    }
+
+    const isEmail = input.includes("@");
+
+    return prisma.user.findFirst({
+      where: isEmail ? { email: input } : { phoneNumber: input },
     });
   }
 }

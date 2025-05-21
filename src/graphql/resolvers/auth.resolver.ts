@@ -22,6 +22,7 @@ import {
   TokenType,
 } from "../../generated/prisma-client";
 import { AuthService } from "../../services/auth.service";
+import { sendEmail } from "../../utils/email";
 
 const authService = new AuthService();
 
@@ -45,14 +46,15 @@ export class AuthResolver {
         password: hashedPassword,
         firstName: input.firstName,
         lastName: input.lastName,
-        phoneNumber: "",
+        phoneNumber: input.phoneNumber,
         accountType: AccountType.USER,
         verified: false,
+
         providers: {
           create: { provider: ProviderType.EMAIL, providerId: input.email },
         },
       },
-      include: { providers: true },
+      include: { providers: true, verificationTokens: true },
     });
 
     const token = await authService.generateVerificationToken(
@@ -61,6 +63,18 @@ export class AuthResolver {
       24
     );
     console.log(`Verification token: ${token}`);
+
+    await sendEmail(
+      user?.email as string,
+      "Verify your email address",
+      `
+      Hello ${
+        user.firstName
+      }, use this code ${token} tp verify your email address. Note, it expires in ${
+        user.verificationTokens[-1]?.expiresAt
+      } hour(s)
+      `
+    );
 
     return {
       token: authService.generateJwt(user.id),
@@ -115,7 +129,14 @@ export class AuthResolver {
   ): Promise<AuthResponse> {
     const provider = await prisma.provider.findFirst({
       where: { provider: ProviderType.EMAIL, providerId: input.email },
-      include: { user: true },
+      include: {
+        user: {
+          include: {
+            providers: true,
+            verificationTokens: true, // optional
+          },
+        },
+      },
     });
 
     if (!provider?.user) throw new Error("No such user exists");

@@ -15,7 +15,7 @@ export class Review {
   rating?: number;
 
   @Field(() => String, { nullable: true })
-  comment?: string;
+  comment?: string | null;
 
   @Field(() => Date)
   createdAt?: Date;

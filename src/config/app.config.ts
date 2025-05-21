@@ -25,7 +25,7 @@ interface Config {
 const config: Config = {
   DATABASE_URL: process.env.DATABASE_URL as string,
   PORT: process.env.PORT as string,
-  JWT_SECRET: process.env.JWT_SECRET as string,
+  JWT_SECRET: process.env.JWT_SECRET || "secret",
   JWT_SECRET_EXPIRES: process.env.JWT_SECRET_EXPIRES as string,
   NODE_ENV: process.env.NODE_ENV as string,
   SMTP: {

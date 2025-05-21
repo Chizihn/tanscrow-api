@@ -1,13 +1,25 @@
+import { Decimal } from "../generated/prisma-client/runtime/library";
+
 /**
  * Calculates the escrow fee for a transaction
  * @param amount The transaction amount
  * @returns The escrow fee
  */
-export function calculateEscrowFee(amount: number): number {
-  // Calculate fee as 2.5% of the transaction amount
-  const feePercentage = 0.025;
-  const fee = amount * feePercentage;
+// export function calculateEscrowFee(amount: number): Decimal {
+//   const feePercentage = 0.025;
+//   const fee = amount * feePercentage;
 
-  // Round to 2 decimal places
-  return Math.round(fee * 100) / 100;
+//   const roundedFee = Math.round(fee * 100) / 100;
+
+//   return new Decimal(roundedFee);
+// }
+
+export function calculateEscrowFee(amount: Decimal | number): Decimal {
+  const decimalAmount = new Decimal(amount); // safe whether it's already Decimal or just number
+  const fee = decimalAmount.mul(0.015);
+  return fee.toDecimalPlaces(2);
 }
+
+// export function toDecimal(value: unknown): Decimal {
+//   return new Decimal(value);
+// }

@@ -17,7 +17,9 @@ import {
 
 @Resolver(() => VerificationDocument)
 export class VerificationResolver {
-  @Query(() => [VerificationDocument])
+  @Query(() => [VerificationDocument], {
+    description: "Retrieve verification documents for the authenticated user",
+  })
   @UseMiddleware(isAuthenticated)
   async myVerificationDocuments(@Ctx() { user }: GraphQLContext) {
     return prisma.verificationDocument.findMany({
@@ -26,7 +28,9 @@ export class VerificationResolver {
     });
   }
 
-  @Query(() => [VerificationDocument])
+  @Query(() => [VerificationDocument], {
+    description: "Retrieve pending verification documents for admin review",
+  })
   @UseMiddleware(isAdmin)
   async pendingVerificationDocuments() {
     return prisma.verificationDocument.findMany({
@@ -35,7 +39,9 @@ export class VerificationResolver {
     });
   }
 
-  @Mutation(() => VerificationDocument)
+  @Mutation(() => VerificationDocument, {
+    description: "Submit a new verification document for review",
+  })
   @UseMiddleware(isAuthenticated)
   async submitVerificationDocument(
     @Arg("input") input: SubmitVerificationDocumentInput,
@@ -52,7 +58,9 @@ export class VerificationResolver {
     return document;
   }
 
-  @Mutation(() => VerificationDocument)
+  @Mutation(() => VerificationDocument, {
+    description: "Review and update the status of a verification document",
+  })
   @UseMiddleware(isAdmin)
   async reviewVerificationDocument(
     @Arg("input") input: ReviewVerificationDocumentInput

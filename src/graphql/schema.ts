@@ -8,6 +8,7 @@ import { DisputeResolver } from "./resolvers/dispute.resolver";
 import { WalletResolver } from "./resolvers/wallet.resolver";
 import { NotificationResolver } from "./resolvers/notification.resolver";
 import { PaymentWebhookResolver } from "./resolvers/payment-webhook.resolver";
+import { WithdrawalResolver } from "./resolvers/withdrawal.resolver";
 
 export const createSchema = async () => {
   return buildSchema({
@@ -21,6 +22,7 @@ export const createSchema = async () => {
       WalletResolver,
       NotificationResolver,
       PaymentWebhookResolver,
+      WithdrawalResolver,
     ],
     validate: false,
     emitSchemaFile: true,

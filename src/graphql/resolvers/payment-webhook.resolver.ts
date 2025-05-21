@@ -2,170 +2,296 @@ import { Resolver, Mutation, Arg, Ctx } from "type-graphql";
 import { prisma } from "../../config/db.config";
 import {
   EscrowStatus,
+  PaymentGateway,
   PaymentStatus,
   TransactionStatus,
+  AuditAction,
 } from "../../generated/prisma-client";
 import { GraphQLContext } from "../types/context.type";
 import { GraphQLJSONObject } from "graphql-type-json";
+import { AuditLogService } from "../../services/audit-log.service";
+import { PaymentSecurityService } from "../../services/payment-security.service";
+import { sendNotification } from "../../services/notification.service";
+
+const auditLog = new AuditLogService(prisma);
+const paymentSecurity = PaymentSecurityService.getInstance();
 
 @Resolver()
 export class PaymentWebhookResolver {
   @Mutation(() => Boolean)
-  async handlePaystackWebhook(
+  async handleWebhook(
     @Arg("signature") signature: string,
     @Arg("payload", () => GraphQLJSONObject) payload: any,
+    @Arg("gateway", () => PaymentGateway) gateway: PaymentGateway,
     @Ctx() {}: GraphQLContext
   ): Promise<boolean> {
     try {
-      // TODO: Implement signature verification
+      if (!(await this.validateWebhook(signature, payload, gateway))) {
+        return false;
+      }
 
-      const event = payload.event;
-      const data = payload.data;
+      const { event, data } = payload;
+      if (!data?.reference) {
+        await this.logSecurityEvent("Missing payment data or reference");
+        return false;
+      }
+
+      const payment = await this.getValidPayment(data.reference);
+      if (!payment) {
+        await this.logSecurityEvent(
+          `Payment not found for reference: ${data.reference}`
+        );
+        return false;
+      }
+
+      const webhookAmount = Number(data.amount) / 100;
+      const expectedAmount = Number(payment.totalAmount);
+
+      if (
+        !(await this.validateAmount(
+          expectedAmount,
+          webhookAmount,
+          data.reference
+        ))
+      ) {
+        return false;
+      }
+
+      if (payment.status === PaymentStatus.SUCCESSFUL) {
+        await this.logSecurityEvent(
+          `Duplicate webhook for completed payment: ${data.reference}`
+        );
+        return false;
+      }
 
       switch (event) {
         case "charge.success":
-          await this.handleSuccessfulPayment(data, "PAYSTACK");
+        case "charge.completed":
+          await this.handleSuccessfulPayment(data, gateway);
           break;
         case "charge.failed":
-          await this.handleFailedPayment(data, "PAYSTACK");
+          await this.handleFailedPayment(data, gateway);
           break;
+        default:
+          await this.logSecurityEvent(`Unhandled event type: ${event}`);
+          return false;
       }
 
       return true;
     } catch (error) {
-      console.error("Paystack webhook error:", error);
+      console.error(`${gateway} webhook error:`, error);
+      await this.logSecurityEvent(
+        `${gateway} webhook processing error: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       return false;
     }
   }
 
-  @Mutation(() => Boolean)
-  async handleFlutterwaveWebhook(
-    @Arg("signature") signature: string,
-    @Arg("payload", () => GraphQLJSONObject) payload: any,
-    @Ctx() {}: GraphQLContext
+  private async validateWebhook(
+    signature: string,
+    payload: any,
+    gateway: PaymentGateway
   ): Promise<boolean> {
+    if (!signature || !payload) {
+      await this.logSecurityEvent("Missing webhook signature or payload");
+      return false;
+    }
+
     try {
-      // TODO: Implement signature verification
-
-      const event = payload.event;
-      const data = payload.data;
-
-      switch (event) {
-        case "charge.completed":
-          await this.handleSuccessfulPayment(data, "FLUTTERWAVE");
-          break;
-        case "charge.failed":
-          await this.handleFailedPayment(data, "FLUTTERWAVE");
-          break;
+      const valid = paymentSecurity.verifyWebhookSignature(
+        signature,
+        payload,
+        gateway
+      );
+      if (!valid) {
+        await this.logSecurityEvent(`Invalid ${gateway} webhook signature`);
+        return false;
       }
 
       return true;
     } catch (error) {
-      console.error("Flutterwave webhook error:", error);
+      await this.logSecurityEvent(
+        `Error validating webhook: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return false;
+    }
+  }
+
+  private async getValidPayment(reference: string) {
+    try {
+      const payment = await prisma.payment.findFirst({
+        where: { gatewayReference: reference },
+        include: { transactions: { take: 1 } },
+      });
+
+      if (!payment || payment.transactions.length === 0) {
+        await this.logSecurityEvent(
+          `Payment or transaction not found for reference: ${reference}`
+        );
+        return null;
+      }
+
+      return payment;
+    } catch (error) {
+      await this.logSecurityEvent(
+        `Error fetching payment: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
+  }
+
+  private async validateAmount(
+    expected: number,
+    received: number,
+    reference: string
+  ): Promise<boolean> {
+    try {
+      const isValid = paymentSecurity.validatePaymentAmount(expected, received);
+      if (!isValid) {
+        await this.logSecurityEvent(
+          `Payment amount mismatch. Expected: ${expected}, Received: ${received} (Reference: ${reference})`
+        );
+      }
+      return isValid;
+    } catch (error) {
+      await this.logSecurityEvent(
+        `Error validating amount: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       return false;
     }
   }
 
   private async handleSuccessfulPayment(
     data: any,
-    gateway: string
+    gateway: PaymentGateway
   ): Promise<void> {
-    const payment = await prisma.payment.findFirst({
-      where: { gatewayReference: data.reference },
-      include: { transactions: { take: 1 } },
-    });
+    try {
+      const payment = await this.getValidPayment(data.reference);
+      if (!payment) return;
 
-    if (!payment || payment.transactions.length === 0)
-      throw new Error("Payment not found or no transactions associated");
+      const transaction = payment.transactions[0];
 
-    const transaction = payment.transactions[0];
+      await prisma.$transaction(async (tx) => {
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: PaymentStatus.SUCCESSFUL,
+            gatewayResponse: data,
+          },
+        });
 
-    await prisma.$transaction(async (tx: any) => {
-      await tx.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: PaymentStatus.SUCCESSFUL,
-          gatewayResponse: data,
-        },
-      });
-
-      await tx.transaction.update({
-        where: { id: transaction.id },
-        data: {
-          status: TransactionStatus.IN_PROGRESS,
-          escrowStatus: EscrowStatus.FUNDED,
-          logs: {
-            create: {
-              action: "PAYMENT_CONFIRMED",
-              status: TransactionStatus.IN_PROGRESS,
-              escrowStatus: EscrowStatus.FUNDED,
-              performedBy: transaction.buyerId,
-              description: `Payment confirmed via ${gateway}`,
+        await tx.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: TransactionStatus.IN_PROGRESS,
+            escrowStatus: EscrowStatus.FUNDED,
+            isPaid: true,
+            logs: {
+              create: {
+                action: "PAYMENT_CONFIRMED",
+                status: TransactionStatus.IN_PROGRESS,
+                escrowStatus: EscrowStatus.FUNDED,
+                performedBy: transaction.buyerId,
+                description: `Payment confirmed via ${gateway}`,
+              },
             },
           },
-        },
-      });
+        });
 
-      await tx.notification.create({
-        data: {
+        // Use the direct notification creation method
+        await sendNotification({
           userId: transaction.sellerId,
           title: "Payment Received",
           message: `Payment for transaction ${transaction.transactionCode} has been confirmed`,
           type: "PAYMENT",
-          relatedEntityId: transaction.id,
-          relatedEntityType: "Transaction",
-        },
+          entityId: transaction.id,
+          entityType: "Transaction",
+        });
       });
-    });
+    } catch (error) {
+      await this.logSecurityEvent(
+        `Error processing successful payment: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 
-  private async handleFailedPayment(data: any, gateway: string): Promise<void> {
-    const payment = await prisma.payment.findFirst({
-      where: { gatewayReference: data.reference },
-      include: { transactions: { take: 1 } },
-    });
+  private async handleFailedPayment(
+    data: any,
+    gateway: PaymentGateway
+  ): Promise<void> {
+    try {
+      const payment = await this.getValidPayment(data.reference);
+      if (!payment) return;
 
-    if (!payment || payment.transactions.length === 0)
-      throw new Error("Payment not found or no transactions associated");
+      const transaction = payment.transactions[0];
 
-    const transaction = payment.transactions[0];
+      await prisma.$transaction(async (tx) => {
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: PaymentStatus.FAILED,
+            gatewayResponse: data,
+          },
+        });
 
-    await prisma.$transaction(async (tx: any) => {
-      await tx.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: PaymentStatus.FAILED,
-          gatewayResponse: data,
-        },
-      });
-
-      await tx.transaction.update({
-        where: { id: transaction.id },
-        data: {
-          status: TransactionStatus.PENDING,
-          escrowStatus: EscrowStatus.NOT_FUNDED,
-          logs: {
-            create: {
-              action: "PAYMENT_FAILED",
-              status: TransactionStatus.PENDING,
-              escrowStatus: EscrowStatus.NOT_FUNDED,
-              performedBy: transaction.buyerId,
-              description: `Payment failed via ${gateway}`,
+        await tx.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: TransactionStatus.PENDING,
+            escrowStatus: EscrowStatus.NOT_FUNDED,
+            logs: {
+              create: {
+                action: "PAYMENT_FAILED",
+                status: TransactionStatus.PENDING,
+                escrowStatus: EscrowStatus.NOT_FUNDED,
+                performedBy: transaction.buyerId,
+                description: `Payment failed via ${gateway}`,
+              },
             },
           },
-        },
-      });
+        });
 
-      await tx.notification.create({
-        data: {
+        // Use the direct notification creation method
+        await sendNotification({
           userId: transaction.buyerId,
           title: "Payment Failed",
           message: `Payment for transaction ${transaction.transactionCode} has failed`,
           type: "PAYMENT",
-          relatedEntityId: transaction.id,
-          relatedEntityType: "Transaction",
-        },
+          entityId: transaction.id,
+          entityType: "Transaction",
+        });
       });
-    });
+    } catch (error) {
+      await this.logSecurityEvent(
+        `Error processing failed payment: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  private async logSecurityEvent(message: string): Promise<void> {
+    try {
+      await auditLog.logSecurityEvent(
+        AuditAction.VERIFY,
+        {
+          message,
+          ipAddress: "webhook",
+        },
+        undefined // Pass undefined instead of "system"
+      );
+    } catch (error) {
+      console.error("Failed to log security event:", error);
+    }
   }
 }

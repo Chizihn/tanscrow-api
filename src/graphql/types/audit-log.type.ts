@@ -23,7 +23,7 @@ export class AuditLog {
   @Field(() => String, { nullable: true })
   entityId?: string | null;
 
-  @Field()
+  @Field(() => String)
   entityType?: string | null;
 
   @Field(() => AuditAction)

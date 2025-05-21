@@ -198,6 +198,9 @@ export class Transaction implements Partial<PrismaTransaction> {
 @InputType()
 export class CreateTransactionInput {
   @Field(() => ID)
+  buyerId!: string;
+
+  @Field(() => ID)
   sellerId!: string;
 
   @Field(() => String)
@@ -229,7 +232,4 @@ export class ProcessPaymentInput {
 
   @Field(() => PaymentGateway)
   paymentGateway!: PaymentGateway;
-
-  @Field(() => String)
-  gatewayReference!: string;
 }

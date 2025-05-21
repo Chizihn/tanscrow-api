@@ -24,6 +24,11 @@ export type User = $Result.DefaultSelection<Prisma.$UserPayload>
  */
 export type Provider = $Result.DefaultSelection<Prisma.$ProviderPayload>
 /**
+ * Model NotificationPreferences
+ * 
+ */
+export type NotificationPreferences = $Result.DefaultSelection<Prisma.$NotificationPreferencesPayload>
+/**
  * Model VerificationDocument
  * 
  */
@@ -58,6 +63,11 @@ export type Wallet = $Result.DefaultSelection<Prisma.$WalletPayload>
  * 
  */
 export type WalletTransaction = $Result.DefaultSelection<Prisma.$WalletTransactionPayload>
+/**
+ * Model BankWithdrawal
+ * 
+ */
+export type BankWithdrawal = $Result.DefaultSelection<Prisma.$BankWithdrawalPayload>
 /**
  * Model Review
  * 
@@ -98,7 +108,17 @@ export type AuditLog = $Result.DefaultSelection<Prisma.$AuditLogPayload>
  * Enums
  */
 export namespace $Enums {
-  export const AccountType: {
+  export const BankWithdrawalStatus: {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED'
+};
+
+export type BankWithdrawalStatus = (typeof BankWithdrawalStatus)[keyof typeof BankWithdrawalStatus]
+
+
+export const AccountType: {
   USER: 'USER',
   ADMIN: 'ADMIN'
 };
@@ -145,6 +165,7 @@ export const TransactionStatus: {
   COMPLETED: 'COMPLETED',
   DELIVERED: 'DELIVERED',
   CANCELED: 'CANCELED',
+  FAILED: 'FAILED',
   DISPUTED: 'DISPUTED',
   REFUND_REQUESTED: 'REFUND_REQUESTED',
   REFUNDED: 'REFUNDED'
@@ -156,6 +177,7 @@ export type TransactionStatus = (typeof TransactionStatus)[keyof typeof Transact
 export const EscrowStatus: {
   NOT_FUNDED: 'NOT_FUNDED',
   FUNDED: 'FUNDED',
+  DISPUTED: 'DISPUTED',
   RELEASED: 'RELEASED',
   REFUNDED: 'REFUNDED',
   PARTIALLY_REFUNDED: 'PARTIALLY_REFUNDED'
@@ -216,6 +238,7 @@ export const WalletTransactionType: {
   ESCROW_FUNDING: 'ESCROW_FUNDING',
   ESCROW_RELEASE: 'ESCROW_RELEASE',
   ESCROW_REFUND: 'ESCROW_REFUND',
+  PAYMENT: 'PAYMENT',
   FEE_PAYMENT: 'FEE_PAYMENT',
   BONUS: 'BONUS'
 };
@@ -300,6 +323,10 @@ export const AuditCategory: {
 export type AuditCategory = (typeof AuditCategory)[keyof typeof AuditCategory]
 
 }
+
+export type BankWithdrawalStatus = $Enums.BankWithdrawalStatus
+
+export const BankWithdrawalStatus: typeof $Enums.BankWithdrawalStatus
 
 export type AccountType = $Enums.AccountType
 
@@ -519,6 +546,16 @@ export class PrismaClient<
   get provider(): Prisma.ProviderDelegate<ExtArgs, ClientOptions>;
 
   /**
+   * `prisma.notificationPreferences`: Exposes CRUD operations for the **NotificationPreferences** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more NotificationPreferences
+    * const notificationPreferences = await prisma.notificationPreferences.findMany()
+    * ```
+    */
+  get notificationPreferences(): Prisma.NotificationPreferencesDelegate<ExtArgs, ClientOptions>;
+
+  /**
    * `prisma.verificationDocument`: Exposes CRUD operations for the **VerificationDocument** model.
     * Example usage:
     * ```ts
@@ -587,6 +624,16 @@ export class PrismaClient<
     * ```
     */
   get walletTransaction(): Prisma.WalletTransactionDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.bankWithdrawal`: Exposes CRUD operations for the **BankWithdrawal** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more BankWithdrawals
+    * const bankWithdrawals = await prisma.bankWithdrawal.findMany()
+    * ```
+    */
+  get bankWithdrawal(): Prisma.BankWithdrawalDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.review`: Exposes CRUD operations for the **Review** model.
@@ -1099,6 +1146,7 @@ export namespace Prisma {
   export const ModelName: {
     User: 'User',
     Provider: 'Provider',
+    NotificationPreferences: 'NotificationPreferences',
     VerificationDocument: 'VerificationDocument',
     Address: 'Address',
     Transaction: 'Transaction',
@@ -1106,6 +1154,7 @@ export namespace Prisma {
     Payment: 'Payment',
     Wallet: 'Wallet',
     WalletTransaction: 'WalletTransaction',
+    BankWithdrawal: 'BankWithdrawal',
     Review: 'Review',
     Dispute: 'Dispute',
     DisputeEvidence: 'DisputeEvidence',
@@ -1131,7 +1180,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "provider" | "verificationDocument" | "address" | "transaction" | "transactionLog" | "payment" | "wallet" | "walletTransaction" | "review" | "dispute" | "disputeEvidence" | "notification" | "verificationToken" | "systemSetting" | "auditLog"
+      modelProps: "user" | "provider" | "notificationPreferences" | "verificationDocument" | "address" | "transaction" | "transactionLog" | "payment" | "wallet" | "walletTransaction" | "bankWithdrawal" | "review" | "dispute" | "disputeEvidence" | "notification" | "verificationToken" | "systemSetting" | "auditLog"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1280,6 +1329,80 @@ export namespace Prisma {
           count: {
             args: Prisma.ProviderCountArgs<ExtArgs>
             result: $Utils.Optional<ProviderCountAggregateOutputType> | number
+          }
+        }
+      }
+      NotificationPreferences: {
+        payload: Prisma.$NotificationPreferencesPayload<ExtArgs>
+        fields: Prisma.NotificationPreferencesFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.NotificationPreferencesFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.NotificationPreferencesFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload>
+          }
+          findFirst: {
+            args: Prisma.NotificationPreferencesFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.NotificationPreferencesFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload>
+          }
+          findMany: {
+            args: Prisma.NotificationPreferencesFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload>[]
+          }
+          create: {
+            args: Prisma.NotificationPreferencesCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload>
+          }
+          createMany: {
+            args: Prisma.NotificationPreferencesCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.NotificationPreferencesCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload>[]
+          }
+          delete: {
+            args: Prisma.NotificationPreferencesDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload>
+          }
+          update: {
+            args: Prisma.NotificationPreferencesUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload>
+          }
+          deleteMany: {
+            args: Prisma.NotificationPreferencesDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.NotificationPreferencesUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.NotificationPreferencesUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload>[]
+          }
+          upsert: {
+            args: Prisma.NotificationPreferencesUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NotificationPreferencesPayload>
+          }
+          aggregate: {
+            args: Prisma.NotificationPreferencesAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateNotificationPreferences>
+          }
+          groupBy: {
+            args: Prisma.NotificationPreferencesGroupByArgs<ExtArgs>
+            result: $Utils.Optional<NotificationPreferencesGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.NotificationPreferencesCountArgs<ExtArgs>
+            result: $Utils.Optional<NotificationPreferencesCountAggregateOutputType> | number
           }
         }
       }
@@ -1798,6 +1921,80 @@ export namespace Prisma {
           count: {
             args: Prisma.WalletTransactionCountArgs<ExtArgs>
             result: $Utils.Optional<WalletTransactionCountAggregateOutputType> | number
+          }
+        }
+      }
+      BankWithdrawal: {
+        payload: Prisma.$BankWithdrawalPayload<ExtArgs>
+        fields: Prisma.BankWithdrawalFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.BankWithdrawalFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.BankWithdrawalFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload>
+          }
+          findFirst: {
+            args: Prisma.BankWithdrawalFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.BankWithdrawalFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload>
+          }
+          findMany: {
+            args: Prisma.BankWithdrawalFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload>[]
+          }
+          create: {
+            args: Prisma.BankWithdrawalCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload>
+          }
+          createMany: {
+            args: Prisma.BankWithdrawalCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.BankWithdrawalCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload>[]
+          }
+          delete: {
+            args: Prisma.BankWithdrawalDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload>
+          }
+          update: {
+            args: Prisma.BankWithdrawalUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload>
+          }
+          deleteMany: {
+            args: Prisma.BankWithdrawalDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.BankWithdrawalUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.BankWithdrawalUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload>[]
+          }
+          upsert: {
+            args: Prisma.BankWithdrawalUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BankWithdrawalPayload>
+          }
+          aggregate: {
+            args: Prisma.BankWithdrawalAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateBankWithdrawal>
+          }
+          groupBy: {
+            args: Prisma.BankWithdrawalGroupByArgs<ExtArgs>
+            result: $Utils.Optional<BankWithdrawalGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.BankWithdrawalCountArgs<ExtArgs>
+            result: $Utils.Optional<BankWithdrawalCountAggregateOutputType> | number
           }
         }
       }
@@ -2405,6 +2602,7 @@ export namespace Prisma {
   export type GlobalOmitConfig = {
     user?: UserOmit
     provider?: ProviderOmit
+    notificationPreferences?: NotificationPreferencesOmit
     verificationDocument?: VerificationDocumentOmit
     address?: AddressOmit
     transaction?: TransactionOmit
@@ -2412,6 +2610,7 @@ export namespace Prisma {
     payment?: PaymentOmit
     wallet?: WalletOmit
     walletTransaction?: WalletTransactionOmit
+    bankWithdrawal?: BankWithdrawalOmit
     review?: ReviewOmit
     dispute?: DisputeOmit
     disputeEvidence?: DisputeEvidenceOmit
@@ -2524,6 +2723,7 @@ export namespace Prisma {
     reviewsReceived: number
     reviewsGiven: number
     AuditLog: number
+    bankWithdrawals: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2538,6 +2738,7 @@ export namespace Prisma {
     reviewsReceived?: boolean | UserCountOutputTypeCountReviewsReceivedArgs
     reviewsGiven?: boolean | UserCountOutputTypeCountReviewsGivenArgs
     AuditLog?: boolean | UserCountOutputTypeCountAuditLogArgs
+    bankWithdrawals?: boolean | UserCountOutputTypeCountBankWithdrawalsArgs
   }
 
   // Custom InputTypes
@@ -2626,6 +2827,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountAuditLogArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: AuditLogWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountBankWithdrawalsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: BankWithdrawalWhereInput
   }
 
 
@@ -3021,6 +3229,8 @@ export namespace Prisma {
     reviewsReceived?: boolean | User$reviewsReceivedArgs<ExtArgs>
     reviewsGiven?: boolean | User$reviewsGivenArgs<ExtArgs>
     AuditLog?: boolean | User$AuditLogArgs<ExtArgs>
+    bankWithdrawals?: boolean | User$bankWithdrawalsArgs<ExtArgs>
+    notificationPreferences?: boolean | User$notificationPreferencesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -3086,6 +3296,8 @@ export namespace Prisma {
     reviewsReceived?: boolean | User$reviewsReceivedArgs<ExtArgs>
     reviewsGiven?: boolean | User$reviewsGivenArgs<ExtArgs>
     AuditLog?: boolean | User$AuditLogArgs<ExtArgs>
+    bankWithdrawals?: boolean | User$bankWithdrawalsArgs<ExtArgs>
+    notificationPreferences?: boolean | User$notificationPreferencesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -3111,6 +3323,8 @@ export namespace Prisma {
       reviewsReceived: Prisma.$ReviewPayload<ExtArgs>[]
       reviewsGiven: Prisma.$ReviewPayload<ExtArgs>[]
       AuditLog: Prisma.$AuditLogPayload<ExtArgs>[]
+      bankWithdrawals: Prisma.$BankWithdrawalPayload<ExtArgs>[]
+      notificationPreferences: Prisma.$NotificationPreferencesPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -3532,6 +3746,8 @@ export namespace Prisma {
     reviewsReceived<T extends User$reviewsReceivedArgs<ExtArgs> = {}>(args?: Subset<T, User$reviewsReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reviewsGiven<T extends User$reviewsGivenArgs<ExtArgs> = {}>(args?: Subset<T, User$reviewsGivenArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     AuditLog<T extends User$AuditLogArgs<ExtArgs> = {}>(args?: Subset<T, User$AuditLogArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    bankWithdrawals<T extends User$bankWithdrawalsArgs<ExtArgs> = {}>(args?: Subset<T, User$bankWithdrawalsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    notificationPreferences<T extends User$notificationPreferencesArgs<ExtArgs> = {}>(args?: Subset<T, User$notificationPreferencesArgs<ExtArgs>>): Prisma__NotificationPreferencesClient<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4268,6 +4484,49 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: AuditLogScalarFieldEnum | AuditLogScalarFieldEnum[]
+  }
+
+  /**
+   * User.bankWithdrawals
+   */
+  export type User$bankWithdrawalsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+    where?: BankWithdrawalWhereInput
+    orderBy?: BankWithdrawalOrderByWithRelationInput | BankWithdrawalOrderByWithRelationInput[]
+    cursor?: BankWithdrawalWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: BankWithdrawalScalarFieldEnum | BankWithdrawalScalarFieldEnum[]
+  }
+
+  /**
+   * User.notificationPreferences
+   */
+  export type User$notificationPreferencesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
+    where?: NotificationPreferencesWhereInput
   }
 
   /**
@@ -5370,6 +5629,1099 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: ProviderInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model NotificationPreferences
+   */
+
+  export type AggregateNotificationPreferences = {
+    _count: NotificationPreferencesCountAggregateOutputType | null
+    _min: NotificationPreferencesMinAggregateOutputType | null
+    _max: NotificationPreferencesMaxAggregateOutputType | null
+  }
+
+  export type NotificationPreferencesMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    emailNotifications: boolean | null
+    smsNotifications: boolean | null
+    pushNotifications: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type NotificationPreferencesMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    emailNotifications: boolean | null
+    smsNotifications: boolean | null
+    pushNotifications: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type NotificationPreferencesCountAggregateOutputType = {
+    id: number
+    userId: number
+    emailNotifications: number
+    smsNotifications: number
+    pushNotifications: number
+    disabledTypes: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type NotificationPreferencesMinAggregateInputType = {
+    id?: true
+    userId?: true
+    emailNotifications?: true
+    smsNotifications?: true
+    pushNotifications?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type NotificationPreferencesMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    emailNotifications?: true
+    smsNotifications?: true
+    pushNotifications?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type NotificationPreferencesCountAggregateInputType = {
+    id?: true
+    userId?: true
+    emailNotifications?: true
+    smsNotifications?: true
+    pushNotifications?: true
+    disabledTypes?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type NotificationPreferencesAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which NotificationPreferences to aggregate.
+     */
+    where?: NotificationPreferencesWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of NotificationPreferences to fetch.
+     */
+    orderBy?: NotificationPreferencesOrderByWithRelationInput | NotificationPreferencesOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: NotificationPreferencesWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` NotificationPreferences from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` NotificationPreferences.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned NotificationPreferences
+    **/
+    _count?: true | NotificationPreferencesCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: NotificationPreferencesMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: NotificationPreferencesMaxAggregateInputType
+  }
+
+  export type GetNotificationPreferencesAggregateType<T extends NotificationPreferencesAggregateArgs> = {
+        [P in keyof T & keyof AggregateNotificationPreferences]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateNotificationPreferences[P]>
+      : GetScalarType<T[P], AggregateNotificationPreferences[P]>
+  }
+
+
+
+
+  export type NotificationPreferencesGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: NotificationPreferencesWhereInput
+    orderBy?: NotificationPreferencesOrderByWithAggregationInput | NotificationPreferencesOrderByWithAggregationInput[]
+    by: NotificationPreferencesScalarFieldEnum[] | NotificationPreferencesScalarFieldEnum
+    having?: NotificationPreferencesScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: NotificationPreferencesCountAggregateInputType | true
+    _min?: NotificationPreferencesMinAggregateInputType
+    _max?: NotificationPreferencesMaxAggregateInputType
+  }
+
+  export type NotificationPreferencesGroupByOutputType = {
+    id: string
+    userId: string
+    emailNotifications: boolean
+    smsNotifications: boolean
+    pushNotifications: boolean
+    disabledTypes: $Enums.NotificationType[]
+    createdAt: Date
+    updatedAt: Date
+    _count: NotificationPreferencesCountAggregateOutputType | null
+    _min: NotificationPreferencesMinAggregateOutputType | null
+    _max: NotificationPreferencesMaxAggregateOutputType | null
+  }
+
+  type GetNotificationPreferencesGroupByPayload<T extends NotificationPreferencesGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<NotificationPreferencesGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof NotificationPreferencesGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], NotificationPreferencesGroupByOutputType[P]>
+            : GetScalarType<T[P], NotificationPreferencesGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type NotificationPreferencesSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    emailNotifications?: boolean
+    smsNotifications?: boolean
+    pushNotifications?: boolean
+    disabledTypes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["notificationPreferences"]>
+
+  export type NotificationPreferencesSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    emailNotifications?: boolean
+    smsNotifications?: boolean
+    pushNotifications?: boolean
+    disabledTypes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["notificationPreferences"]>
+
+  export type NotificationPreferencesSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    emailNotifications?: boolean
+    smsNotifications?: boolean
+    pushNotifications?: boolean
+    disabledTypes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["notificationPreferences"]>
+
+  export type NotificationPreferencesSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    emailNotifications?: boolean
+    smsNotifications?: boolean
+    pushNotifications?: boolean
+    disabledTypes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type NotificationPreferencesOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "emailNotifications" | "smsNotifications" | "pushNotifications" | "disabledTypes" | "createdAt" | "updatedAt", ExtArgs["result"]["notificationPreferences"]>
+  export type NotificationPreferencesInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type NotificationPreferencesIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type NotificationPreferencesIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $NotificationPreferencesPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "NotificationPreferences"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      emailNotifications: boolean
+      smsNotifications: boolean
+      pushNotifications: boolean
+      disabledTypes: $Enums.NotificationType[]
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["notificationPreferences"]>
+    composites: {}
+  }
+
+  type NotificationPreferencesGetPayload<S extends boolean | null | undefined | NotificationPreferencesDefaultArgs> = $Result.GetResult<Prisma.$NotificationPreferencesPayload, S>
+
+  type NotificationPreferencesCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<NotificationPreferencesFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: NotificationPreferencesCountAggregateInputType | true
+    }
+
+  export interface NotificationPreferencesDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['NotificationPreferences'], meta: { name: 'NotificationPreferences' } }
+    /**
+     * Find zero or one NotificationPreferences that matches the filter.
+     * @param {NotificationPreferencesFindUniqueArgs} args - Arguments to find a NotificationPreferences
+     * @example
+     * // Get one NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends NotificationPreferencesFindUniqueArgs>(args: SelectSubset<T, NotificationPreferencesFindUniqueArgs<ExtArgs>>): Prisma__NotificationPreferencesClient<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one NotificationPreferences that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {NotificationPreferencesFindUniqueOrThrowArgs} args - Arguments to find a NotificationPreferences
+     * @example
+     * // Get one NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends NotificationPreferencesFindUniqueOrThrowArgs>(args: SelectSubset<T, NotificationPreferencesFindUniqueOrThrowArgs<ExtArgs>>): Prisma__NotificationPreferencesClient<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first NotificationPreferences that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NotificationPreferencesFindFirstArgs} args - Arguments to find a NotificationPreferences
+     * @example
+     * // Get one NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends NotificationPreferencesFindFirstArgs>(args?: SelectSubset<T, NotificationPreferencesFindFirstArgs<ExtArgs>>): Prisma__NotificationPreferencesClient<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first NotificationPreferences that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NotificationPreferencesFindFirstOrThrowArgs} args - Arguments to find a NotificationPreferences
+     * @example
+     * // Get one NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends NotificationPreferencesFindFirstOrThrowArgs>(args?: SelectSubset<T, NotificationPreferencesFindFirstOrThrowArgs<ExtArgs>>): Prisma__NotificationPreferencesClient<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more NotificationPreferences that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NotificationPreferencesFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.findMany()
+     * 
+     * // Get first 10 NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const notificationPreferencesWithIdOnly = await prisma.notificationPreferences.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends NotificationPreferencesFindManyArgs>(args?: SelectSubset<T, NotificationPreferencesFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a NotificationPreferences.
+     * @param {NotificationPreferencesCreateArgs} args - Arguments to create a NotificationPreferences.
+     * @example
+     * // Create one NotificationPreferences
+     * const NotificationPreferences = await prisma.notificationPreferences.create({
+     *   data: {
+     *     // ... data to create a NotificationPreferences
+     *   }
+     * })
+     * 
+     */
+    create<T extends NotificationPreferencesCreateArgs>(args: SelectSubset<T, NotificationPreferencesCreateArgs<ExtArgs>>): Prisma__NotificationPreferencesClient<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many NotificationPreferences.
+     * @param {NotificationPreferencesCreateManyArgs} args - Arguments to create many NotificationPreferences.
+     * @example
+     * // Create many NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends NotificationPreferencesCreateManyArgs>(args?: SelectSubset<T, NotificationPreferencesCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many NotificationPreferences and returns the data saved in the database.
+     * @param {NotificationPreferencesCreateManyAndReturnArgs} args - Arguments to create many NotificationPreferences.
+     * @example
+     * // Create many NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many NotificationPreferences and only return the `id`
+     * const notificationPreferencesWithIdOnly = await prisma.notificationPreferences.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends NotificationPreferencesCreateManyAndReturnArgs>(args?: SelectSubset<T, NotificationPreferencesCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a NotificationPreferences.
+     * @param {NotificationPreferencesDeleteArgs} args - Arguments to delete one NotificationPreferences.
+     * @example
+     * // Delete one NotificationPreferences
+     * const NotificationPreferences = await prisma.notificationPreferences.delete({
+     *   where: {
+     *     // ... filter to delete one NotificationPreferences
+     *   }
+     * })
+     * 
+     */
+    delete<T extends NotificationPreferencesDeleteArgs>(args: SelectSubset<T, NotificationPreferencesDeleteArgs<ExtArgs>>): Prisma__NotificationPreferencesClient<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one NotificationPreferences.
+     * @param {NotificationPreferencesUpdateArgs} args - Arguments to update one NotificationPreferences.
+     * @example
+     * // Update one NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends NotificationPreferencesUpdateArgs>(args: SelectSubset<T, NotificationPreferencesUpdateArgs<ExtArgs>>): Prisma__NotificationPreferencesClient<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more NotificationPreferences.
+     * @param {NotificationPreferencesDeleteManyArgs} args - Arguments to filter NotificationPreferences to delete.
+     * @example
+     * // Delete a few NotificationPreferences
+     * const { count } = await prisma.notificationPreferences.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends NotificationPreferencesDeleteManyArgs>(args?: SelectSubset<T, NotificationPreferencesDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more NotificationPreferences.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NotificationPreferencesUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends NotificationPreferencesUpdateManyArgs>(args: SelectSubset<T, NotificationPreferencesUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more NotificationPreferences and returns the data updated in the database.
+     * @param {NotificationPreferencesUpdateManyAndReturnArgs} args - Arguments to update many NotificationPreferences.
+     * @example
+     * // Update many NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more NotificationPreferences and only return the `id`
+     * const notificationPreferencesWithIdOnly = await prisma.notificationPreferences.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends NotificationPreferencesUpdateManyAndReturnArgs>(args: SelectSubset<T, NotificationPreferencesUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one NotificationPreferences.
+     * @param {NotificationPreferencesUpsertArgs} args - Arguments to update or create a NotificationPreferences.
+     * @example
+     * // Update or create a NotificationPreferences
+     * const notificationPreferences = await prisma.notificationPreferences.upsert({
+     *   create: {
+     *     // ... data to create a NotificationPreferences
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the NotificationPreferences we want to update
+     *   }
+     * })
+     */
+    upsert<T extends NotificationPreferencesUpsertArgs>(args: SelectSubset<T, NotificationPreferencesUpsertArgs<ExtArgs>>): Prisma__NotificationPreferencesClient<$Result.GetResult<Prisma.$NotificationPreferencesPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of NotificationPreferences.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NotificationPreferencesCountArgs} args - Arguments to filter NotificationPreferences to count.
+     * @example
+     * // Count the number of NotificationPreferences
+     * const count = await prisma.notificationPreferences.count({
+     *   where: {
+     *     // ... the filter for the NotificationPreferences we want to count
+     *   }
+     * })
+    **/
+    count<T extends NotificationPreferencesCountArgs>(
+      args?: Subset<T, NotificationPreferencesCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], NotificationPreferencesCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a NotificationPreferences.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NotificationPreferencesAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends NotificationPreferencesAggregateArgs>(args: Subset<T, NotificationPreferencesAggregateArgs>): Prisma.PrismaPromise<GetNotificationPreferencesAggregateType<T>>
+
+    /**
+     * Group by NotificationPreferences.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NotificationPreferencesGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends NotificationPreferencesGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: NotificationPreferencesGroupByArgs['orderBy'] }
+        : { orderBy?: NotificationPreferencesGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, NotificationPreferencesGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetNotificationPreferencesGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the NotificationPreferences model
+   */
+  readonly fields: NotificationPreferencesFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for NotificationPreferences.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__NotificationPreferencesClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the NotificationPreferences model
+   */
+  interface NotificationPreferencesFieldRefs {
+    readonly id: FieldRef<"NotificationPreferences", 'String'>
+    readonly userId: FieldRef<"NotificationPreferences", 'String'>
+    readonly emailNotifications: FieldRef<"NotificationPreferences", 'Boolean'>
+    readonly smsNotifications: FieldRef<"NotificationPreferences", 'Boolean'>
+    readonly pushNotifications: FieldRef<"NotificationPreferences", 'Boolean'>
+    readonly disabledTypes: FieldRef<"NotificationPreferences", 'NotificationType[]'>
+    readonly createdAt: FieldRef<"NotificationPreferences", 'DateTime'>
+    readonly updatedAt: FieldRef<"NotificationPreferences", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * NotificationPreferences findUnique
+   */
+  export type NotificationPreferencesFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
+    /**
+     * Filter, which NotificationPreferences to fetch.
+     */
+    where: NotificationPreferencesWhereUniqueInput
+  }
+
+  /**
+   * NotificationPreferences findUniqueOrThrow
+   */
+  export type NotificationPreferencesFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
+    /**
+     * Filter, which NotificationPreferences to fetch.
+     */
+    where: NotificationPreferencesWhereUniqueInput
+  }
+
+  /**
+   * NotificationPreferences findFirst
+   */
+  export type NotificationPreferencesFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
+    /**
+     * Filter, which NotificationPreferences to fetch.
+     */
+    where?: NotificationPreferencesWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of NotificationPreferences to fetch.
+     */
+    orderBy?: NotificationPreferencesOrderByWithRelationInput | NotificationPreferencesOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for NotificationPreferences.
+     */
+    cursor?: NotificationPreferencesWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` NotificationPreferences from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` NotificationPreferences.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of NotificationPreferences.
+     */
+    distinct?: NotificationPreferencesScalarFieldEnum | NotificationPreferencesScalarFieldEnum[]
+  }
+
+  /**
+   * NotificationPreferences findFirstOrThrow
+   */
+  export type NotificationPreferencesFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
+    /**
+     * Filter, which NotificationPreferences to fetch.
+     */
+    where?: NotificationPreferencesWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of NotificationPreferences to fetch.
+     */
+    orderBy?: NotificationPreferencesOrderByWithRelationInput | NotificationPreferencesOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for NotificationPreferences.
+     */
+    cursor?: NotificationPreferencesWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` NotificationPreferences from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` NotificationPreferences.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of NotificationPreferences.
+     */
+    distinct?: NotificationPreferencesScalarFieldEnum | NotificationPreferencesScalarFieldEnum[]
+  }
+
+  /**
+   * NotificationPreferences findMany
+   */
+  export type NotificationPreferencesFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
+    /**
+     * Filter, which NotificationPreferences to fetch.
+     */
+    where?: NotificationPreferencesWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of NotificationPreferences to fetch.
+     */
+    orderBy?: NotificationPreferencesOrderByWithRelationInput | NotificationPreferencesOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing NotificationPreferences.
+     */
+    cursor?: NotificationPreferencesWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` NotificationPreferences from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` NotificationPreferences.
+     */
+    skip?: number
+    distinct?: NotificationPreferencesScalarFieldEnum | NotificationPreferencesScalarFieldEnum[]
+  }
+
+  /**
+   * NotificationPreferences create
+   */
+  export type NotificationPreferencesCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
+    /**
+     * The data needed to create a NotificationPreferences.
+     */
+    data: XOR<NotificationPreferencesCreateInput, NotificationPreferencesUncheckedCreateInput>
+  }
+
+  /**
+   * NotificationPreferences createMany
+   */
+  export type NotificationPreferencesCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many NotificationPreferences.
+     */
+    data: NotificationPreferencesCreateManyInput | NotificationPreferencesCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * NotificationPreferences createManyAndReturn
+   */
+  export type NotificationPreferencesCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * The data used to create many NotificationPreferences.
+     */
+    data: NotificationPreferencesCreateManyInput | NotificationPreferencesCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * NotificationPreferences update
+   */
+  export type NotificationPreferencesUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
+    /**
+     * The data needed to update a NotificationPreferences.
+     */
+    data: XOR<NotificationPreferencesUpdateInput, NotificationPreferencesUncheckedUpdateInput>
+    /**
+     * Choose, which NotificationPreferences to update.
+     */
+    where: NotificationPreferencesWhereUniqueInput
+  }
+
+  /**
+   * NotificationPreferences updateMany
+   */
+  export type NotificationPreferencesUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update NotificationPreferences.
+     */
+    data: XOR<NotificationPreferencesUpdateManyMutationInput, NotificationPreferencesUncheckedUpdateManyInput>
+    /**
+     * Filter which NotificationPreferences to update
+     */
+    where?: NotificationPreferencesWhereInput
+    /**
+     * Limit how many NotificationPreferences to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * NotificationPreferences updateManyAndReturn
+   */
+  export type NotificationPreferencesUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * The data used to update NotificationPreferences.
+     */
+    data: XOR<NotificationPreferencesUpdateManyMutationInput, NotificationPreferencesUncheckedUpdateManyInput>
+    /**
+     * Filter which NotificationPreferences to update
+     */
+    where?: NotificationPreferencesWhereInput
+    /**
+     * Limit how many NotificationPreferences to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * NotificationPreferences upsert
+   */
+  export type NotificationPreferencesUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
+    /**
+     * The filter to search for the NotificationPreferences to update in case it exists.
+     */
+    where: NotificationPreferencesWhereUniqueInput
+    /**
+     * In case the NotificationPreferences found by the `where` argument doesn't exist, create a new NotificationPreferences with this data.
+     */
+    create: XOR<NotificationPreferencesCreateInput, NotificationPreferencesUncheckedCreateInput>
+    /**
+     * In case the NotificationPreferences was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<NotificationPreferencesUpdateInput, NotificationPreferencesUncheckedUpdateInput>
+  }
+
+  /**
+   * NotificationPreferences delete
+   */
+  export type NotificationPreferencesDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
+    /**
+     * Filter which NotificationPreferences to delete.
+     */
+    where: NotificationPreferencesWhereUniqueInput
+  }
+
+  /**
+   * NotificationPreferences deleteMany
+   */
+  export type NotificationPreferencesDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which NotificationPreferences to delete
+     */
+    where?: NotificationPreferencesWhereInput
+    /**
+     * Limit how many NotificationPreferences to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * NotificationPreferences without action
+   */
+  export type NotificationPreferencesDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NotificationPreferences
+     */
+    select?: NotificationPreferencesSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NotificationPreferences
+     */
+    omit?: NotificationPreferencesOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: NotificationPreferencesInclude<ExtArgs> | null
   }
 
 
@@ -13706,6 +15058,1202 @@ export namespace Prisma {
 
 
   /**
+   * Model BankWithdrawal
+   */
+
+  export type AggregateBankWithdrawal = {
+    _count: BankWithdrawalCountAggregateOutputType | null
+    _avg: BankWithdrawalAvgAggregateOutputType | null
+    _sum: BankWithdrawalSumAggregateOutputType | null
+    _min: BankWithdrawalMinAggregateOutputType | null
+    _max: BankWithdrawalMaxAggregateOutputType | null
+  }
+
+  export type BankWithdrawalAvgAggregateOutputType = {
+    amount: Decimal | null
+  }
+
+  export type BankWithdrawalSumAggregateOutputType = {
+    amount: Decimal | null
+  }
+
+  export type BankWithdrawalMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    bankName: string | null
+    accountNumber: string | null
+    accountName: string | null
+    bankCode: string | null
+    amount: Decimal | null
+    currency: $Enums.PaymentCurrency | null
+    reference: string | null
+    status: $Enums.BankWithdrawalStatus | null
+    failureReason: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type BankWithdrawalMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    bankName: string | null
+    accountNumber: string | null
+    accountName: string | null
+    bankCode: string | null
+    amount: Decimal | null
+    currency: $Enums.PaymentCurrency | null
+    reference: string | null
+    status: $Enums.BankWithdrawalStatus | null
+    failureReason: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type BankWithdrawalCountAggregateOutputType = {
+    id: number
+    userId: number
+    bankName: number
+    accountNumber: number
+    accountName: number
+    bankCode: number
+    amount: number
+    currency: number
+    reference: number
+    status: number
+    failureReason: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type BankWithdrawalAvgAggregateInputType = {
+    amount?: true
+  }
+
+  export type BankWithdrawalSumAggregateInputType = {
+    amount?: true
+  }
+
+  export type BankWithdrawalMinAggregateInputType = {
+    id?: true
+    userId?: true
+    bankName?: true
+    accountNumber?: true
+    accountName?: true
+    bankCode?: true
+    amount?: true
+    currency?: true
+    reference?: true
+    status?: true
+    failureReason?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type BankWithdrawalMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    bankName?: true
+    accountNumber?: true
+    accountName?: true
+    bankCode?: true
+    amount?: true
+    currency?: true
+    reference?: true
+    status?: true
+    failureReason?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type BankWithdrawalCountAggregateInputType = {
+    id?: true
+    userId?: true
+    bankName?: true
+    accountNumber?: true
+    accountName?: true
+    bankCode?: true
+    amount?: true
+    currency?: true
+    reference?: true
+    status?: true
+    failureReason?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type BankWithdrawalAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which BankWithdrawal to aggregate.
+     */
+    where?: BankWithdrawalWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of BankWithdrawals to fetch.
+     */
+    orderBy?: BankWithdrawalOrderByWithRelationInput | BankWithdrawalOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: BankWithdrawalWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` BankWithdrawals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` BankWithdrawals.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned BankWithdrawals
+    **/
+    _count?: true | BankWithdrawalCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: BankWithdrawalAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: BankWithdrawalSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: BankWithdrawalMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: BankWithdrawalMaxAggregateInputType
+  }
+
+  export type GetBankWithdrawalAggregateType<T extends BankWithdrawalAggregateArgs> = {
+        [P in keyof T & keyof AggregateBankWithdrawal]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateBankWithdrawal[P]>
+      : GetScalarType<T[P], AggregateBankWithdrawal[P]>
+  }
+
+
+
+
+  export type BankWithdrawalGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: BankWithdrawalWhereInput
+    orderBy?: BankWithdrawalOrderByWithAggregationInput | BankWithdrawalOrderByWithAggregationInput[]
+    by: BankWithdrawalScalarFieldEnum[] | BankWithdrawalScalarFieldEnum
+    having?: BankWithdrawalScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: BankWithdrawalCountAggregateInputType | true
+    _avg?: BankWithdrawalAvgAggregateInputType
+    _sum?: BankWithdrawalSumAggregateInputType
+    _min?: BankWithdrawalMinAggregateInputType
+    _max?: BankWithdrawalMaxAggregateInputType
+  }
+
+  export type BankWithdrawalGroupByOutputType = {
+    id: string
+    userId: string
+    bankName: string
+    accountNumber: string
+    accountName: string
+    bankCode: string
+    amount: Decimal
+    currency: $Enums.PaymentCurrency
+    reference: string
+    status: $Enums.BankWithdrawalStatus
+    failureReason: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: BankWithdrawalCountAggregateOutputType | null
+    _avg: BankWithdrawalAvgAggregateOutputType | null
+    _sum: BankWithdrawalSumAggregateOutputType | null
+    _min: BankWithdrawalMinAggregateOutputType | null
+    _max: BankWithdrawalMaxAggregateOutputType | null
+  }
+
+  type GetBankWithdrawalGroupByPayload<T extends BankWithdrawalGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<BankWithdrawalGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof BankWithdrawalGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], BankWithdrawalGroupByOutputType[P]>
+            : GetScalarType<T[P], BankWithdrawalGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type BankWithdrawalSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    bankName?: boolean
+    accountNumber?: boolean
+    accountName?: boolean
+    bankCode?: boolean
+    amount?: boolean
+    currency?: boolean
+    reference?: boolean
+    status?: boolean
+    failureReason?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["bankWithdrawal"]>
+
+  export type BankWithdrawalSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    bankName?: boolean
+    accountNumber?: boolean
+    accountName?: boolean
+    bankCode?: boolean
+    amount?: boolean
+    currency?: boolean
+    reference?: boolean
+    status?: boolean
+    failureReason?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["bankWithdrawal"]>
+
+  export type BankWithdrawalSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    bankName?: boolean
+    accountNumber?: boolean
+    accountName?: boolean
+    bankCode?: boolean
+    amount?: boolean
+    currency?: boolean
+    reference?: boolean
+    status?: boolean
+    failureReason?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["bankWithdrawal"]>
+
+  export type BankWithdrawalSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    bankName?: boolean
+    accountNumber?: boolean
+    accountName?: boolean
+    bankCode?: boolean
+    amount?: boolean
+    currency?: boolean
+    reference?: boolean
+    status?: boolean
+    failureReason?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type BankWithdrawalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "bankName" | "accountNumber" | "accountName" | "bankCode" | "amount" | "currency" | "reference" | "status" | "failureReason" | "createdAt" | "updatedAt", ExtArgs["result"]["bankWithdrawal"]>
+  export type BankWithdrawalInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type BankWithdrawalIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type BankWithdrawalIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $BankWithdrawalPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "BankWithdrawal"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      bankName: string
+      accountNumber: string
+      accountName: string
+      bankCode: string
+      amount: Prisma.Decimal
+      currency: $Enums.PaymentCurrency
+      reference: string
+      status: $Enums.BankWithdrawalStatus
+      failureReason: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["bankWithdrawal"]>
+    composites: {}
+  }
+
+  type BankWithdrawalGetPayload<S extends boolean | null | undefined | BankWithdrawalDefaultArgs> = $Result.GetResult<Prisma.$BankWithdrawalPayload, S>
+
+  type BankWithdrawalCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<BankWithdrawalFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: BankWithdrawalCountAggregateInputType | true
+    }
+
+  export interface BankWithdrawalDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['BankWithdrawal'], meta: { name: 'BankWithdrawal' } }
+    /**
+     * Find zero or one BankWithdrawal that matches the filter.
+     * @param {BankWithdrawalFindUniqueArgs} args - Arguments to find a BankWithdrawal
+     * @example
+     * // Get one BankWithdrawal
+     * const bankWithdrawal = await prisma.bankWithdrawal.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends BankWithdrawalFindUniqueArgs>(args: SelectSubset<T, BankWithdrawalFindUniqueArgs<ExtArgs>>): Prisma__BankWithdrawalClient<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one BankWithdrawal that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {BankWithdrawalFindUniqueOrThrowArgs} args - Arguments to find a BankWithdrawal
+     * @example
+     * // Get one BankWithdrawal
+     * const bankWithdrawal = await prisma.bankWithdrawal.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends BankWithdrawalFindUniqueOrThrowArgs>(args: SelectSubset<T, BankWithdrawalFindUniqueOrThrowArgs<ExtArgs>>): Prisma__BankWithdrawalClient<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first BankWithdrawal that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BankWithdrawalFindFirstArgs} args - Arguments to find a BankWithdrawal
+     * @example
+     * // Get one BankWithdrawal
+     * const bankWithdrawal = await prisma.bankWithdrawal.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends BankWithdrawalFindFirstArgs>(args?: SelectSubset<T, BankWithdrawalFindFirstArgs<ExtArgs>>): Prisma__BankWithdrawalClient<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first BankWithdrawal that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BankWithdrawalFindFirstOrThrowArgs} args - Arguments to find a BankWithdrawal
+     * @example
+     * // Get one BankWithdrawal
+     * const bankWithdrawal = await prisma.bankWithdrawal.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends BankWithdrawalFindFirstOrThrowArgs>(args?: SelectSubset<T, BankWithdrawalFindFirstOrThrowArgs<ExtArgs>>): Prisma__BankWithdrawalClient<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more BankWithdrawals that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BankWithdrawalFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all BankWithdrawals
+     * const bankWithdrawals = await prisma.bankWithdrawal.findMany()
+     * 
+     * // Get first 10 BankWithdrawals
+     * const bankWithdrawals = await prisma.bankWithdrawal.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const bankWithdrawalWithIdOnly = await prisma.bankWithdrawal.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends BankWithdrawalFindManyArgs>(args?: SelectSubset<T, BankWithdrawalFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a BankWithdrawal.
+     * @param {BankWithdrawalCreateArgs} args - Arguments to create a BankWithdrawal.
+     * @example
+     * // Create one BankWithdrawal
+     * const BankWithdrawal = await prisma.bankWithdrawal.create({
+     *   data: {
+     *     // ... data to create a BankWithdrawal
+     *   }
+     * })
+     * 
+     */
+    create<T extends BankWithdrawalCreateArgs>(args: SelectSubset<T, BankWithdrawalCreateArgs<ExtArgs>>): Prisma__BankWithdrawalClient<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many BankWithdrawals.
+     * @param {BankWithdrawalCreateManyArgs} args - Arguments to create many BankWithdrawals.
+     * @example
+     * // Create many BankWithdrawals
+     * const bankWithdrawal = await prisma.bankWithdrawal.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends BankWithdrawalCreateManyArgs>(args?: SelectSubset<T, BankWithdrawalCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many BankWithdrawals and returns the data saved in the database.
+     * @param {BankWithdrawalCreateManyAndReturnArgs} args - Arguments to create many BankWithdrawals.
+     * @example
+     * // Create many BankWithdrawals
+     * const bankWithdrawal = await prisma.bankWithdrawal.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many BankWithdrawals and only return the `id`
+     * const bankWithdrawalWithIdOnly = await prisma.bankWithdrawal.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends BankWithdrawalCreateManyAndReturnArgs>(args?: SelectSubset<T, BankWithdrawalCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a BankWithdrawal.
+     * @param {BankWithdrawalDeleteArgs} args - Arguments to delete one BankWithdrawal.
+     * @example
+     * // Delete one BankWithdrawal
+     * const BankWithdrawal = await prisma.bankWithdrawal.delete({
+     *   where: {
+     *     // ... filter to delete one BankWithdrawal
+     *   }
+     * })
+     * 
+     */
+    delete<T extends BankWithdrawalDeleteArgs>(args: SelectSubset<T, BankWithdrawalDeleteArgs<ExtArgs>>): Prisma__BankWithdrawalClient<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one BankWithdrawal.
+     * @param {BankWithdrawalUpdateArgs} args - Arguments to update one BankWithdrawal.
+     * @example
+     * // Update one BankWithdrawal
+     * const bankWithdrawal = await prisma.bankWithdrawal.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends BankWithdrawalUpdateArgs>(args: SelectSubset<T, BankWithdrawalUpdateArgs<ExtArgs>>): Prisma__BankWithdrawalClient<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more BankWithdrawals.
+     * @param {BankWithdrawalDeleteManyArgs} args - Arguments to filter BankWithdrawals to delete.
+     * @example
+     * // Delete a few BankWithdrawals
+     * const { count } = await prisma.bankWithdrawal.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends BankWithdrawalDeleteManyArgs>(args?: SelectSubset<T, BankWithdrawalDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more BankWithdrawals.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BankWithdrawalUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many BankWithdrawals
+     * const bankWithdrawal = await prisma.bankWithdrawal.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends BankWithdrawalUpdateManyArgs>(args: SelectSubset<T, BankWithdrawalUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more BankWithdrawals and returns the data updated in the database.
+     * @param {BankWithdrawalUpdateManyAndReturnArgs} args - Arguments to update many BankWithdrawals.
+     * @example
+     * // Update many BankWithdrawals
+     * const bankWithdrawal = await prisma.bankWithdrawal.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more BankWithdrawals and only return the `id`
+     * const bankWithdrawalWithIdOnly = await prisma.bankWithdrawal.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends BankWithdrawalUpdateManyAndReturnArgs>(args: SelectSubset<T, BankWithdrawalUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one BankWithdrawal.
+     * @param {BankWithdrawalUpsertArgs} args - Arguments to update or create a BankWithdrawal.
+     * @example
+     * // Update or create a BankWithdrawal
+     * const bankWithdrawal = await prisma.bankWithdrawal.upsert({
+     *   create: {
+     *     // ... data to create a BankWithdrawal
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the BankWithdrawal we want to update
+     *   }
+     * })
+     */
+    upsert<T extends BankWithdrawalUpsertArgs>(args: SelectSubset<T, BankWithdrawalUpsertArgs<ExtArgs>>): Prisma__BankWithdrawalClient<$Result.GetResult<Prisma.$BankWithdrawalPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of BankWithdrawals.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BankWithdrawalCountArgs} args - Arguments to filter BankWithdrawals to count.
+     * @example
+     * // Count the number of BankWithdrawals
+     * const count = await prisma.bankWithdrawal.count({
+     *   where: {
+     *     // ... the filter for the BankWithdrawals we want to count
+     *   }
+     * })
+    **/
+    count<T extends BankWithdrawalCountArgs>(
+      args?: Subset<T, BankWithdrawalCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], BankWithdrawalCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a BankWithdrawal.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BankWithdrawalAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends BankWithdrawalAggregateArgs>(args: Subset<T, BankWithdrawalAggregateArgs>): Prisma.PrismaPromise<GetBankWithdrawalAggregateType<T>>
+
+    /**
+     * Group by BankWithdrawal.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BankWithdrawalGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends BankWithdrawalGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: BankWithdrawalGroupByArgs['orderBy'] }
+        : { orderBy?: BankWithdrawalGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, BankWithdrawalGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetBankWithdrawalGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the BankWithdrawal model
+   */
+  readonly fields: BankWithdrawalFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for BankWithdrawal.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__BankWithdrawalClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the BankWithdrawal model
+   */
+  interface BankWithdrawalFieldRefs {
+    readonly id: FieldRef<"BankWithdrawal", 'String'>
+    readonly userId: FieldRef<"BankWithdrawal", 'String'>
+    readonly bankName: FieldRef<"BankWithdrawal", 'String'>
+    readonly accountNumber: FieldRef<"BankWithdrawal", 'String'>
+    readonly accountName: FieldRef<"BankWithdrawal", 'String'>
+    readonly bankCode: FieldRef<"BankWithdrawal", 'String'>
+    readonly amount: FieldRef<"BankWithdrawal", 'Decimal'>
+    readonly currency: FieldRef<"BankWithdrawal", 'PaymentCurrency'>
+    readonly reference: FieldRef<"BankWithdrawal", 'String'>
+    readonly status: FieldRef<"BankWithdrawal", 'BankWithdrawalStatus'>
+    readonly failureReason: FieldRef<"BankWithdrawal", 'String'>
+    readonly createdAt: FieldRef<"BankWithdrawal", 'DateTime'>
+    readonly updatedAt: FieldRef<"BankWithdrawal", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * BankWithdrawal findUnique
+   */
+  export type BankWithdrawalFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+    /**
+     * Filter, which BankWithdrawal to fetch.
+     */
+    where: BankWithdrawalWhereUniqueInput
+  }
+
+  /**
+   * BankWithdrawal findUniqueOrThrow
+   */
+  export type BankWithdrawalFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+    /**
+     * Filter, which BankWithdrawal to fetch.
+     */
+    where: BankWithdrawalWhereUniqueInput
+  }
+
+  /**
+   * BankWithdrawal findFirst
+   */
+  export type BankWithdrawalFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+    /**
+     * Filter, which BankWithdrawal to fetch.
+     */
+    where?: BankWithdrawalWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of BankWithdrawals to fetch.
+     */
+    orderBy?: BankWithdrawalOrderByWithRelationInput | BankWithdrawalOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for BankWithdrawals.
+     */
+    cursor?: BankWithdrawalWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` BankWithdrawals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` BankWithdrawals.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of BankWithdrawals.
+     */
+    distinct?: BankWithdrawalScalarFieldEnum | BankWithdrawalScalarFieldEnum[]
+  }
+
+  /**
+   * BankWithdrawal findFirstOrThrow
+   */
+  export type BankWithdrawalFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+    /**
+     * Filter, which BankWithdrawal to fetch.
+     */
+    where?: BankWithdrawalWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of BankWithdrawals to fetch.
+     */
+    orderBy?: BankWithdrawalOrderByWithRelationInput | BankWithdrawalOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for BankWithdrawals.
+     */
+    cursor?: BankWithdrawalWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` BankWithdrawals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` BankWithdrawals.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of BankWithdrawals.
+     */
+    distinct?: BankWithdrawalScalarFieldEnum | BankWithdrawalScalarFieldEnum[]
+  }
+
+  /**
+   * BankWithdrawal findMany
+   */
+  export type BankWithdrawalFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+    /**
+     * Filter, which BankWithdrawals to fetch.
+     */
+    where?: BankWithdrawalWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of BankWithdrawals to fetch.
+     */
+    orderBy?: BankWithdrawalOrderByWithRelationInput | BankWithdrawalOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing BankWithdrawals.
+     */
+    cursor?: BankWithdrawalWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` BankWithdrawals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` BankWithdrawals.
+     */
+    skip?: number
+    distinct?: BankWithdrawalScalarFieldEnum | BankWithdrawalScalarFieldEnum[]
+  }
+
+  /**
+   * BankWithdrawal create
+   */
+  export type BankWithdrawalCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+    /**
+     * The data needed to create a BankWithdrawal.
+     */
+    data: XOR<BankWithdrawalCreateInput, BankWithdrawalUncheckedCreateInput>
+  }
+
+  /**
+   * BankWithdrawal createMany
+   */
+  export type BankWithdrawalCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many BankWithdrawals.
+     */
+    data: BankWithdrawalCreateManyInput | BankWithdrawalCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * BankWithdrawal createManyAndReturn
+   */
+  export type BankWithdrawalCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * The data used to create many BankWithdrawals.
+     */
+    data: BankWithdrawalCreateManyInput | BankWithdrawalCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * BankWithdrawal update
+   */
+  export type BankWithdrawalUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+    /**
+     * The data needed to update a BankWithdrawal.
+     */
+    data: XOR<BankWithdrawalUpdateInput, BankWithdrawalUncheckedUpdateInput>
+    /**
+     * Choose, which BankWithdrawal to update.
+     */
+    where: BankWithdrawalWhereUniqueInput
+  }
+
+  /**
+   * BankWithdrawal updateMany
+   */
+  export type BankWithdrawalUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update BankWithdrawals.
+     */
+    data: XOR<BankWithdrawalUpdateManyMutationInput, BankWithdrawalUncheckedUpdateManyInput>
+    /**
+     * Filter which BankWithdrawals to update
+     */
+    where?: BankWithdrawalWhereInput
+    /**
+     * Limit how many BankWithdrawals to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * BankWithdrawal updateManyAndReturn
+   */
+  export type BankWithdrawalUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * The data used to update BankWithdrawals.
+     */
+    data: XOR<BankWithdrawalUpdateManyMutationInput, BankWithdrawalUncheckedUpdateManyInput>
+    /**
+     * Filter which BankWithdrawals to update
+     */
+    where?: BankWithdrawalWhereInput
+    /**
+     * Limit how many BankWithdrawals to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * BankWithdrawal upsert
+   */
+  export type BankWithdrawalUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+    /**
+     * The filter to search for the BankWithdrawal to update in case it exists.
+     */
+    where: BankWithdrawalWhereUniqueInput
+    /**
+     * In case the BankWithdrawal found by the `where` argument doesn't exist, create a new BankWithdrawal with this data.
+     */
+    create: XOR<BankWithdrawalCreateInput, BankWithdrawalUncheckedCreateInput>
+    /**
+     * In case the BankWithdrawal was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<BankWithdrawalUpdateInput, BankWithdrawalUncheckedUpdateInput>
+  }
+
+  /**
+   * BankWithdrawal delete
+   */
+  export type BankWithdrawalDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+    /**
+     * Filter which BankWithdrawal to delete.
+     */
+    where: BankWithdrawalWhereUniqueInput
+  }
+
+  /**
+   * BankWithdrawal deleteMany
+   */
+  export type BankWithdrawalDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which BankWithdrawals to delete
+     */
+    where?: BankWithdrawalWhereInput
+    /**
+     * Limit how many BankWithdrawals to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * BankWithdrawal without action
+   */
+  export type BankWithdrawalDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BankWithdrawal
+     */
+    select?: BankWithdrawalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BankWithdrawal
+     */
+    omit?: BankWithdrawalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BankWithdrawalInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Model Review
    */
 
@@ -21501,6 +24049,20 @@ export namespace Prisma {
   export type ProviderScalarFieldEnum = (typeof ProviderScalarFieldEnum)[keyof typeof ProviderScalarFieldEnum]
 
 
+  export const NotificationPreferencesScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    emailNotifications: 'emailNotifications',
+    smsNotifications: 'smsNotifications',
+    pushNotifications: 'pushNotifications',
+    disabledTypes: 'disabledTypes',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type NotificationPreferencesScalarFieldEnum = (typeof NotificationPreferencesScalarFieldEnum)[keyof typeof NotificationPreferencesScalarFieldEnum]
+
+
   export const VerificationDocumentScalarFieldEnum: {
     id: 'id',
     userId: 'userId',
@@ -21624,6 +24186,25 @@ export namespace Prisma {
   };
 
   export type WalletTransactionScalarFieldEnum = (typeof WalletTransactionScalarFieldEnum)[keyof typeof WalletTransactionScalarFieldEnum]
+
+
+  export const BankWithdrawalScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    bankName: 'bankName',
+    accountNumber: 'accountNumber',
+    accountName: 'accountName',
+    bankCode: 'bankCode',
+    amount: 'amount',
+    currency: 'currency',
+    reference: 'reference',
+    status: 'status',
+    failureReason: 'failureReason',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type BankWithdrawalScalarFieldEnum = (typeof BankWithdrawalScalarFieldEnum)[keyof typeof BankWithdrawalScalarFieldEnum]
 
 
   export const ReviewScalarFieldEnum: {
@@ -21835,6 +24416,20 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'NotificationType[]'
+   */
+  export type ListEnumNotificationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'NotificationType[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'NotificationType'
+   */
+  export type EnumNotificationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'NotificationType'>
+    
+
+
+  /**
    * Reference to a field of type 'DocumentType'
    */
   export type EnumDocumentTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DocumentType'>
@@ -22017,6 +24612,20 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'BankWithdrawalStatus'
+   */
+  export type EnumBankWithdrawalStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BankWithdrawalStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'BankWithdrawalStatus[]'
+   */
+  export type ListEnumBankWithdrawalStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BankWithdrawalStatus[]'>
+    
+
+
+  /**
    * Reference to a field of type 'Int'
    */
   export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
@@ -22041,20 +24650,6 @@ export namespace Prisma {
    * Reference to a field of type 'DisputeStatus[]'
    */
   export type ListEnumDisputeStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DisputeStatus[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'NotificationType'
-   */
-  export type EnumNotificationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'NotificationType'>
-    
-
-
-  /**
-   * Reference to a field of type 'NotificationType[]'
-   */
-  export type ListEnumNotificationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'NotificationType[]'>
     
 
 
@@ -22146,6 +24741,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewListRelationFilter
     reviewsGiven?: ReviewListRelationFilter
     AuditLog?: AuditLogListRelationFilter
+    bankWithdrawals?: BankWithdrawalListRelationFilter
+    notificationPreferences?: XOR<NotificationPreferencesNullableScalarRelationFilter, NotificationPreferencesWhereInput> | null
   }
 
   export type UserOrderByWithRelationInput = {
@@ -22174,6 +24771,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewOrderByRelationAggregateInput
     reviewsGiven?: ReviewOrderByRelationAggregateInput
     AuditLog?: AuditLogOrderByRelationAggregateInput
+    bankWithdrawals?: BankWithdrawalOrderByRelationAggregateInput
+    notificationPreferences?: NotificationPreferencesOrderByWithRelationInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -22205,6 +24804,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewListRelationFilter
     reviewsGiven?: ReviewListRelationFilter
     AuditLog?: AuditLogListRelationFilter
+    bankWithdrawals?: BankWithdrawalListRelationFilter
+    notificationPreferences?: XOR<NotificationPreferencesNullableScalarRelationFilter, NotificationPreferencesWhereInput> | null
   }, "id" | "email" | "phoneNumber">
 
   export type UserOrderByWithAggregationInput = {
@@ -22306,6 +24907,76 @@ export namespace Prisma {
     tokenExpiry?: DateTimeNullableWithAggregatesFilter<"Provider"> | Date | string | null
     userId?: StringWithAggregatesFilter<"Provider"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Provider"> | Date | string
+  }
+
+  export type NotificationPreferencesWhereInput = {
+    AND?: NotificationPreferencesWhereInput | NotificationPreferencesWhereInput[]
+    OR?: NotificationPreferencesWhereInput[]
+    NOT?: NotificationPreferencesWhereInput | NotificationPreferencesWhereInput[]
+    id?: StringFilter<"NotificationPreferences"> | string
+    userId?: StringFilter<"NotificationPreferences"> | string
+    emailNotifications?: BoolFilter<"NotificationPreferences"> | boolean
+    smsNotifications?: BoolFilter<"NotificationPreferences"> | boolean
+    pushNotifications?: BoolFilter<"NotificationPreferences"> | boolean
+    disabledTypes?: EnumNotificationTypeNullableListFilter<"NotificationPreferences">
+    createdAt?: DateTimeFilter<"NotificationPreferences"> | Date | string
+    updatedAt?: DateTimeFilter<"NotificationPreferences"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }
+
+  export type NotificationPreferencesOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    emailNotifications?: SortOrder
+    smsNotifications?: SortOrder
+    pushNotifications?: SortOrder
+    disabledTypes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+  }
+
+  export type NotificationPreferencesWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    userId?: string
+    AND?: NotificationPreferencesWhereInput | NotificationPreferencesWhereInput[]
+    OR?: NotificationPreferencesWhereInput[]
+    NOT?: NotificationPreferencesWhereInput | NotificationPreferencesWhereInput[]
+    emailNotifications?: BoolFilter<"NotificationPreferences"> | boolean
+    smsNotifications?: BoolFilter<"NotificationPreferences"> | boolean
+    pushNotifications?: BoolFilter<"NotificationPreferences"> | boolean
+    disabledTypes?: EnumNotificationTypeNullableListFilter<"NotificationPreferences">
+    createdAt?: DateTimeFilter<"NotificationPreferences"> | Date | string
+    updatedAt?: DateTimeFilter<"NotificationPreferences"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }, "id" | "userId">
+
+  export type NotificationPreferencesOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    emailNotifications?: SortOrder
+    smsNotifications?: SortOrder
+    pushNotifications?: SortOrder
+    disabledTypes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: NotificationPreferencesCountOrderByAggregateInput
+    _max?: NotificationPreferencesMaxOrderByAggregateInput
+    _min?: NotificationPreferencesMinOrderByAggregateInput
+  }
+
+  export type NotificationPreferencesScalarWhereWithAggregatesInput = {
+    AND?: NotificationPreferencesScalarWhereWithAggregatesInput | NotificationPreferencesScalarWhereWithAggregatesInput[]
+    OR?: NotificationPreferencesScalarWhereWithAggregatesInput[]
+    NOT?: NotificationPreferencesScalarWhereWithAggregatesInput | NotificationPreferencesScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"NotificationPreferences"> | string
+    userId?: StringWithAggregatesFilter<"NotificationPreferences"> | string
+    emailNotifications?: BoolWithAggregatesFilter<"NotificationPreferences"> | boolean
+    smsNotifications?: BoolWithAggregatesFilter<"NotificationPreferences"> | boolean
+    pushNotifications?: BoolWithAggregatesFilter<"NotificationPreferences"> | boolean
+    disabledTypes?: EnumNotificationTypeNullableListFilter<"NotificationPreferences">
+    createdAt?: DateTimeWithAggregatesFilter<"NotificationPreferences"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"NotificationPreferences"> | Date | string
   }
 
   export type VerificationDocumentWhereInput = {
@@ -22956,6 +25627,103 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"WalletTransaction"> | Date | string
   }
 
+  export type BankWithdrawalWhereInput = {
+    AND?: BankWithdrawalWhereInput | BankWithdrawalWhereInput[]
+    OR?: BankWithdrawalWhereInput[]
+    NOT?: BankWithdrawalWhereInput | BankWithdrawalWhereInput[]
+    id?: StringFilter<"BankWithdrawal"> | string
+    userId?: StringFilter<"BankWithdrawal"> | string
+    bankName?: StringFilter<"BankWithdrawal"> | string
+    accountNumber?: StringFilter<"BankWithdrawal"> | string
+    accountName?: StringFilter<"BankWithdrawal"> | string
+    bankCode?: StringFilter<"BankWithdrawal"> | string
+    amount?: DecimalFilter<"BankWithdrawal"> | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyFilter<"BankWithdrawal"> | $Enums.PaymentCurrency
+    reference?: StringFilter<"BankWithdrawal"> | string
+    status?: EnumBankWithdrawalStatusFilter<"BankWithdrawal"> | $Enums.BankWithdrawalStatus
+    failureReason?: StringNullableFilter<"BankWithdrawal"> | string | null
+    createdAt?: DateTimeFilter<"BankWithdrawal"> | Date | string
+    updatedAt?: DateTimeFilter<"BankWithdrawal"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }
+
+  export type BankWithdrawalOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    bankName?: SortOrder
+    accountNumber?: SortOrder
+    accountName?: SortOrder
+    bankCode?: SortOrder
+    amount?: SortOrder
+    currency?: SortOrder
+    reference?: SortOrder
+    status?: SortOrder
+    failureReason?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+  }
+
+  export type BankWithdrawalWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    reference?: string
+    AND?: BankWithdrawalWhereInput | BankWithdrawalWhereInput[]
+    OR?: BankWithdrawalWhereInput[]
+    NOT?: BankWithdrawalWhereInput | BankWithdrawalWhereInput[]
+    userId?: StringFilter<"BankWithdrawal"> | string
+    bankName?: StringFilter<"BankWithdrawal"> | string
+    accountNumber?: StringFilter<"BankWithdrawal"> | string
+    accountName?: StringFilter<"BankWithdrawal"> | string
+    bankCode?: StringFilter<"BankWithdrawal"> | string
+    amount?: DecimalFilter<"BankWithdrawal"> | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyFilter<"BankWithdrawal"> | $Enums.PaymentCurrency
+    status?: EnumBankWithdrawalStatusFilter<"BankWithdrawal"> | $Enums.BankWithdrawalStatus
+    failureReason?: StringNullableFilter<"BankWithdrawal"> | string | null
+    createdAt?: DateTimeFilter<"BankWithdrawal"> | Date | string
+    updatedAt?: DateTimeFilter<"BankWithdrawal"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }, "id" | "reference">
+
+  export type BankWithdrawalOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    bankName?: SortOrder
+    accountNumber?: SortOrder
+    accountName?: SortOrder
+    bankCode?: SortOrder
+    amount?: SortOrder
+    currency?: SortOrder
+    reference?: SortOrder
+    status?: SortOrder
+    failureReason?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: BankWithdrawalCountOrderByAggregateInput
+    _avg?: BankWithdrawalAvgOrderByAggregateInput
+    _max?: BankWithdrawalMaxOrderByAggregateInput
+    _min?: BankWithdrawalMinOrderByAggregateInput
+    _sum?: BankWithdrawalSumOrderByAggregateInput
+  }
+
+  export type BankWithdrawalScalarWhereWithAggregatesInput = {
+    AND?: BankWithdrawalScalarWhereWithAggregatesInput | BankWithdrawalScalarWhereWithAggregatesInput[]
+    OR?: BankWithdrawalScalarWhereWithAggregatesInput[]
+    NOT?: BankWithdrawalScalarWhereWithAggregatesInput | BankWithdrawalScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"BankWithdrawal"> | string
+    userId?: StringWithAggregatesFilter<"BankWithdrawal"> | string
+    bankName?: StringWithAggregatesFilter<"BankWithdrawal"> | string
+    accountNumber?: StringWithAggregatesFilter<"BankWithdrawal"> | string
+    accountName?: StringWithAggregatesFilter<"BankWithdrawal"> | string
+    bankCode?: StringWithAggregatesFilter<"BankWithdrawal"> | string
+    amount?: DecimalWithAggregatesFilter<"BankWithdrawal"> | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyWithAggregatesFilter<"BankWithdrawal"> | $Enums.PaymentCurrency
+    reference?: StringWithAggregatesFilter<"BankWithdrawal"> | string
+    status?: EnumBankWithdrawalStatusWithAggregatesFilter<"BankWithdrawal"> | $Enums.BankWithdrawalStatus
+    failureReason?: StringNullableWithAggregatesFilter<"BankWithdrawal"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"BankWithdrawal"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"BankWithdrawal"> | Date | string
+  }
+
   export type ReviewWhereInput = {
     AND?: ReviewWhereInput | ReviewWhereInput[]
     OR?: ReviewWhereInput[]
@@ -23487,6 +26255,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -23514,6 +26284,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserUpdateInput = {
@@ -23541,6 +26313,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -23568,6 +26342,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -23681,6 +26457,82 @@ export namespace Prisma {
     tokenExpiry?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type NotificationPreferencesCreateInput = {
+    id?: string
+    emailNotifications?: boolean
+    smsNotifications?: boolean
+    pushNotifications?: boolean
+    disabledTypes?: NotificationPreferencesCreatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutNotificationPreferencesInput
+  }
+
+  export type NotificationPreferencesUncheckedCreateInput = {
+    id?: string
+    userId: string
+    emailNotifications?: boolean
+    smsNotifications?: boolean
+    pushNotifications?: boolean
+    disabledTypes?: NotificationPreferencesCreatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type NotificationPreferencesUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    emailNotifications?: BoolFieldUpdateOperationsInput | boolean
+    smsNotifications?: BoolFieldUpdateOperationsInput | boolean
+    pushNotifications?: BoolFieldUpdateOperationsInput | boolean
+    disabledTypes?: NotificationPreferencesUpdatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutNotificationPreferencesNestedInput
+  }
+
+  export type NotificationPreferencesUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    emailNotifications?: BoolFieldUpdateOperationsInput | boolean
+    smsNotifications?: BoolFieldUpdateOperationsInput | boolean
+    pushNotifications?: BoolFieldUpdateOperationsInput | boolean
+    disabledTypes?: NotificationPreferencesUpdatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type NotificationPreferencesCreateManyInput = {
+    id?: string
+    userId: string
+    emailNotifications?: boolean
+    smsNotifications?: boolean
+    pushNotifications?: boolean
+    disabledTypes?: NotificationPreferencesCreatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type NotificationPreferencesUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    emailNotifications?: BoolFieldUpdateOperationsInput | boolean
+    smsNotifications?: BoolFieldUpdateOperationsInput | boolean
+    pushNotifications?: BoolFieldUpdateOperationsInput | boolean
+    disabledTypes?: NotificationPreferencesUpdatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type NotificationPreferencesUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    emailNotifications?: BoolFieldUpdateOperationsInput | boolean
+    smsNotifications?: BoolFieldUpdateOperationsInput | boolean
+    pushNotifications?: BoolFieldUpdateOperationsInput | boolean
+    disabledTypes?: NotificationPreferencesUpdatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type VerificationDocumentCreateInput = {
@@ -24424,6 +27276,117 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type BankWithdrawalCreateInput = {
+    id?: string
+    bankName: string
+    accountNumber: string
+    accountName: string
+    bankCode: string
+    amount: Decimal | DecimalJsLike | number | string
+    currency?: $Enums.PaymentCurrency
+    reference: string
+    status?: $Enums.BankWithdrawalStatus
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutBankWithdrawalsInput
+  }
+
+  export type BankWithdrawalUncheckedCreateInput = {
+    id?: string
+    userId: string
+    bankName: string
+    accountNumber: string
+    accountName: string
+    bankCode: string
+    amount: Decimal | DecimalJsLike | number | string
+    currency?: $Enums.PaymentCurrency
+    reference: string
+    status?: $Enums.BankWithdrawalStatus
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type BankWithdrawalUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    bankName?: StringFieldUpdateOperationsInput | string
+    accountNumber?: StringFieldUpdateOperationsInput | string
+    accountName?: StringFieldUpdateOperationsInput | string
+    bankCode?: StringFieldUpdateOperationsInput | string
+    amount?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyFieldUpdateOperationsInput | $Enums.PaymentCurrency
+    reference?: StringFieldUpdateOperationsInput | string
+    status?: EnumBankWithdrawalStatusFieldUpdateOperationsInput | $Enums.BankWithdrawalStatus
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutBankWithdrawalsNestedInput
+  }
+
+  export type BankWithdrawalUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    bankName?: StringFieldUpdateOperationsInput | string
+    accountNumber?: StringFieldUpdateOperationsInput | string
+    accountName?: StringFieldUpdateOperationsInput | string
+    bankCode?: StringFieldUpdateOperationsInput | string
+    amount?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyFieldUpdateOperationsInput | $Enums.PaymentCurrency
+    reference?: StringFieldUpdateOperationsInput | string
+    status?: EnumBankWithdrawalStatusFieldUpdateOperationsInput | $Enums.BankWithdrawalStatus
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type BankWithdrawalCreateManyInput = {
+    id?: string
+    userId: string
+    bankName: string
+    accountNumber: string
+    accountName: string
+    bankCode: string
+    amount: Decimal | DecimalJsLike | number | string
+    currency?: $Enums.PaymentCurrency
+    reference: string
+    status?: $Enums.BankWithdrawalStatus
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type BankWithdrawalUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    bankName?: StringFieldUpdateOperationsInput | string
+    accountNumber?: StringFieldUpdateOperationsInput | string
+    accountName?: StringFieldUpdateOperationsInput | string
+    bankCode?: StringFieldUpdateOperationsInput | string
+    amount?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyFieldUpdateOperationsInput | $Enums.PaymentCurrency
+    reference?: StringFieldUpdateOperationsInput | string
+    status?: EnumBankWithdrawalStatusFieldUpdateOperationsInput | $Enums.BankWithdrawalStatus
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type BankWithdrawalUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    bankName?: StringFieldUpdateOperationsInput | string
+    accountNumber?: StringFieldUpdateOperationsInput | string
+    accountName?: StringFieldUpdateOperationsInput | string
+    bankCode?: StringFieldUpdateOperationsInput | string
+    amount?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyFieldUpdateOperationsInput | $Enums.PaymentCurrency
+    reference?: StringFieldUpdateOperationsInput | string
+    status?: EnumBankWithdrawalStatusFieldUpdateOperationsInput | $Enums.BankWithdrawalStatus
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type ReviewCreateInput = {
     id?: string
     rating: number
@@ -25076,6 +28039,17 @@ export namespace Prisma {
     none?: AuditLogWhereInput
   }
 
+  export type BankWithdrawalListRelationFilter = {
+    every?: BankWithdrawalWhereInput
+    some?: BankWithdrawalWhereInput
+    none?: BankWithdrawalWhereInput
+  }
+
+  export type NotificationPreferencesNullableScalarRelationFilter = {
+    is?: NotificationPreferencesWhereInput | null
+    isNot?: NotificationPreferencesWhereInput | null
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -25110,6 +28084,10 @@ export namespace Prisma {
   }
 
   export type AuditLogOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type BankWithdrawalOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -25301,6 +28279,45 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type EnumNotificationTypeNullableListFilter<$PrismaModel = never> = {
+    equals?: $Enums.NotificationType[] | ListEnumNotificationTypeFieldRefInput<$PrismaModel> | null
+    has?: $Enums.NotificationType | EnumNotificationTypeFieldRefInput<$PrismaModel> | null
+    hasEvery?: $Enums.NotificationType[] | ListEnumNotificationTypeFieldRefInput<$PrismaModel>
+    hasSome?: $Enums.NotificationType[] | ListEnumNotificationTypeFieldRefInput<$PrismaModel>
+    isEmpty?: boolean
+  }
+
+  export type NotificationPreferencesCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    emailNotifications?: SortOrder
+    smsNotifications?: SortOrder
+    pushNotifications?: SortOrder
+    disabledTypes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type NotificationPreferencesMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    emailNotifications?: SortOrder
+    smsNotifications?: SortOrder
+    pushNotifications?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type NotificationPreferencesMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    emailNotifications?: SortOrder
+    smsNotifications?: SortOrder
+    pushNotifications?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type EnumDocumentTypeFilter<$PrismaModel = never> = {
@@ -25972,6 +28989,79 @@ export namespace Prisma {
     _max?: NestedEnumWalletTransactionStatusFilter<$PrismaModel>
   }
 
+  export type EnumBankWithdrawalStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.BankWithdrawalStatus | EnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.BankWithdrawalStatus[] | ListEnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.BankWithdrawalStatus[] | ListEnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumBankWithdrawalStatusFilter<$PrismaModel> | $Enums.BankWithdrawalStatus
+  }
+
+  export type BankWithdrawalCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    bankName?: SortOrder
+    accountNumber?: SortOrder
+    accountName?: SortOrder
+    bankCode?: SortOrder
+    amount?: SortOrder
+    currency?: SortOrder
+    reference?: SortOrder
+    status?: SortOrder
+    failureReason?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type BankWithdrawalAvgOrderByAggregateInput = {
+    amount?: SortOrder
+  }
+
+  export type BankWithdrawalMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    bankName?: SortOrder
+    accountNumber?: SortOrder
+    accountName?: SortOrder
+    bankCode?: SortOrder
+    amount?: SortOrder
+    currency?: SortOrder
+    reference?: SortOrder
+    status?: SortOrder
+    failureReason?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type BankWithdrawalMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    bankName?: SortOrder
+    accountNumber?: SortOrder
+    accountName?: SortOrder
+    bankCode?: SortOrder
+    amount?: SortOrder
+    currency?: SortOrder
+    reference?: SortOrder
+    status?: SortOrder
+    failureReason?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type BankWithdrawalSumOrderByAggregateInput = {
+    amount?: SortOrder
+  }
+
+  export type EnumBankWithdrawalStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.BankWithdrawalStatus | EnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.BankWithdrawalStatus[] | ListEnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.BankWithdrawalStatus[] | ListEnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumBankWithdrawalStatusWithAggregatesFilter<$PrismaModel> | $Enums.BankWithdrawalStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumBankWithdrawalStatusFilter<$PrismaModel>
+    _max?: NestedEnumBankWithdrawalStatusFilter<$PrismaModel>
+  }
+
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -26433,6 +29523,19 @@ export namespace Prisma {
     connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
   }
 
+  export type BankWithdrawalCreateNestedManyWithoutUserInput = {
+    create?: XOR<BankWithdrawalCreateWithoutUserInput, BankWithdrawalUncheckedCreateWithoutUserInput> | BankWithdrawalCreateWithoutUserInput[] | BankWithdrawalUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: BankWithdrawalCreateOrConnectWithoutUserInput | BankWithdrawalCreateOrConnectWithoutUserInput[]
+    createMany?: BankWithdrawalCreateManyUserInputEnvelope
+    connect?: BankWithdrawalWhereUniqueInput | BankWithdrawalWhereUniqueInput[]
+  }
+
+  export type NotificationPreferencesCreateNestedOneWithoutUserInput = {
+    create?: XOR<NotificationPreferencesCreateWithoutUserInput, NotificationPreferencesUncheckedCreateWithoutUserInput>
+    connectOrCreate?: NotificationPreferencesCreateOrConnectWithoutUserInput
+    connect?: NotificationPreferencesWhereUniqueInput
+  }
+
   export type DisputeUncheckedCreateNestedManyWithoutInitiatorInput = {
     create?: XOR<DisputeCreateWithoutInitiatorInput, DisputeUncheckedCreateWithoutInitiatorInput> | DisputeCreateWithoutInitiatorInput[] | DisputeUncheckedCreateWithoutInitiatorInput[]
     connectOrCreate?: DisputeCreateOrConnectWithoutInitiatorInput | DisputeCreateOrConnectWithoutInitiatorInput[]
@@ -26514,6 +29617,19 @@ export namespace Prisma {
     connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
     createMany?: AuditLogCreateManyUserInputEnvelope
     connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+  }
+
+  export type BankWithdrawalUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<BankWithdrawalCreateWithoutUserInput, BankWithdrawalUncheckedCreateWithoutUserInput> | BankWithdrawalCreateWithoutUserInput[] | BankWithdrawalUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: BankWithdrawalCreateOrConnectWithoutUserInput | BankWithdrawalCreateOrConnectWithoutUserInput[]
+    createMany?: BankWithdrawalCreateManyUserInputEnvelope
+    connect?: BankWithdrawalWhereUniqueInput | BankWithdrawalWhereUniqueInput[]
+  }
+
+  export type NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput = {
+    create?: XOR<NotificationPreferencesCreateWithoutUserInput, NotificationPreferencesUncheckedCreateWithoutUserInput>
+    connectOrCreate?: NotificationPreferencesCreateOrConnectWithoutUserInput
+    connect?: NotificationPreferencesWhereUniqueInput
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -26710,6 +29826,30 @@ export namespace Prisma {
     deleteMany?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
   }
 
+  export type BankWithdrawalUpdateManyWithoutUserNestedInput = {
+    create?: XOR<BankWithdrawalCreateWithoutUserInput, BankWithdrawalUncheckedCreateWithoutUserInput> | BankWithdrawalCreateWithoutUserInput[] | BankWithdrawalUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: BankWithdrawalCreateOrConnectWithoutUserInput | BankWithdrawalCreateOrConnectWithoutUserInput[]
+    upsert?: BankWithdrawalUpsertWithWhereUniqueWithoutUserInput | BankWithdrawalUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: BankWithdrawalCreateManyUserInputEnvelope
+    set?: BankWithdrawalWhereUniqueInput | BankWithdrawalWhereUniqueInput[]
+    disconnect?: BankWithdrawalWhereUniqueInput | BankWithdrawalWhereUniqueInput[]
+    delete?: BankWithdrawalWhereUniqueInput | BankWithdrawalWhereUniqueInput[]
+    connect?: BankWithdrawalWhereUniqueInput | BankWithdrawalWhereUniqueInput[]
+    update?: BankWithdrawalUpdateWithWhereUniqueWithoutUserInput | BankWithdrawalUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: BankWithdrawalUpdateManyWithWhereWithoutUserInput | BankWithdrawalUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: BankWithdrawalScalarWhereInput | BankWithdrawalScalarWhereInput[]
+  }
+
+  export type NotificationPreferencesUpdateOneWithoutUserNestedInput = {
+    create?: XOR<NotificationPreferencesCreateWithoutUserInput, NotificationPreferencesUncheckedCreateWithoutUserInput>
+    connectOrCreate?: NotificationPreferencesCreateOrConnectWithoutUserInput
+    upsert?: NotificationPreferencesUpsertWithoutUserInput
+    disconnect?: NotificationPreferencesWhereInput | boolean
+    delete?: NotificationPreferencesWhereInput | boolean
+    connect?: NotificationPreferencesWhereUniqueInput
+    update?: XOR<XOR<NotificationPreferencesUpdateToOneWithWhereWithoutUserInput, NotificationPreferencesUpdateWithoutUserInput>, NotificationPreferencesUncheckedUpdateWithoutUserInput>
+  }
+
   export type DisputeUncheckedUpdateManyWithoutInitiatorNestedInput = {
     create?: XOR<DisputeCreateWithoutInitiatorInput, DisputeUncheckedCreateWithoutInitiatorInput> | DisputeCreateWithoutInitiatorInput[] | DisputeUncheckedCreateWithoutInitiatorInput[]
     connectOrCreate?: DisputeCreateOrConnectWithoutInitiatorInput | DisputeCreateOrConnectWithoutInitiatorInput[]
@@ -26874,6 +30014,30 @@ export namespace Prisma {
     deleteMany?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
   }
 
+  export type BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<BankWithdrawalCreateWithoutUserInput, BankWithdrawalUncheckedCreateWithoutUserInput> | BankWithdrawalCreateWithoutUserInput[] | BankWithdrawalUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: BankWithdrawalCreateOrConnectWithoutUserInput | BankWithdrawalCreateOrConnectWithoutUserInput[]
+    upsert?: BankWithdrawalUpsertWithWhereUniqueWithoutUserInput | BankWithdrawalUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: BankWithdrawalCreateManyUserInputEnvelope
+    set?: BankWithdrawalWhereUniqueInput | BankWithdrawalWhereUniqueInput[]
+    disconnect?: BankWithdrawalWhereUniqueInput | BankWithdrawalWhereUniqueInput[]
+    delete?: BankWithdrawalWhereUniqueInput | BankWithdrawalWhereUniqueInput[]
+    connect?: BankWithdrawalWhereUniqueInput | BankWithdrawalWhereUniqueInput[]
+    update?: BankWithdrawalUpdateWithWhereUniqueWithoutUserInput | BankWithdrawalUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: BankWithdrawalUpdateManyWithWhereWithoutUserInput | BankWithdrawalUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: BankWithdrawalScalarWhereInput | BankWithdrawalScalarWhereInput[]
+  }
+
+  export type NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput = {
+    create?: XOR<NotificationPreferencesCreateWithoutUserInput, NotificationPreferencesUncheckedCreateWithoutUserInput>
+    connectOrCreate?: NotificationPreferencesCreateOrConnectWithoutUserInput
+    upsert?: NotificationPreferencesUpsertWithoutUserInput
+    disconnect?: NotificationPreferencesWhereInput | boolean
+    delete?: NotificationPreferencesWhereInput | boolean
+    connect?: NotificationPreferencesWhereUniqueInput
+    update?: XOR<XOR<NotificationPreferencesUpdateToOneWithWhereWithoutUserInput, NotificationPreferencesUpdateWithoutUserInput>, NotificationPreferencesUncheckedUpdateWithoutUserInput>
+  }
+
   export type UserCreateNestedOneWithoutProvidersInput = {
     create?: XOR<UserCreateWithoutProvidersInput, UserUncheckedCreateWithoutProvidersInput>
     connectOrCreate?: UserCreateOrConnectWithoutProvidersInput
@@ -26894,6 +30058,29 @@ export namespace Prisma {
     upsert?: UserUpsertWithoutProvidersInput
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutProvidersInput, UserUpdateWithoutProvidersInput>, UserUncheckedUpdateWithoutProvidersInput>
+  }
+
+  export type NotificationPreferencesCreatedisabledTypesInput = {
+    set: $Enums.NotificationType[]
+  }
+
+  export type UserCreateNestedOneWithoutNotificationPreferencesInput = {
+    create?: XOR<UserCreateWithoutNotificationPreferencesInput, UserUncheckedCreateWithoutNotificationPreferencesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutNotificationPreferencesInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type NotificationPreferencesUpdatedisabledTypesInput = {
+    set?: $Enums.NotificationType[]
+    push?: $Enums.NotificationType | $Enums.NotificationType[]
+  }
+
+  export type UserUpdateOneRequiredWithoutNotificationPreferencesNestedInput = {
+    create?: XOR<UserCreateWithoutNotificationPreferencesInput, UserUncheckedCreateWithoutNotificationPreferencesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutNotificationPreferencesInput
+    upsert?: UserUpsertWithoutNotificationPreferencesInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutNotificationPreferencesInput, UserUpdateWithoutNotificationPreferencesInput>, UserUncheckedUpdateWithoutNotificationPreferencesInput>
   }
 
   export type UserCreateNestedOneWithoutVerificationDocumentsInput = {
@@ -27246,6 +30433,24 @@ export namespace Prisma {
     upsert?: WalletUpsertWithoutTransactionsInput
     connect?: WalletWhereUniqueInput
     update?: XOR<XOR<WalletUpdateToOneWithWhereWithoutTransactionsInput, WalletUpdateWithoutTransactionsInput>, WalletUncheckedUpdateWithoutTransactionsInput>
+  }
+
+  export type UserCreateNestedOneWithoutBankWithdrawalsInput = {
+    create?: XOR<UserCreateWithoutBankWithdrawalsInput, UserUncheckedCreateWithoutBankWithdrawalsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutBankWithdrawalsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type EnumBankWithdrawalStatusFieldUpdateOperationsInput = {
+    set?: $Enums.BankWithdrawalStatus
+  }
+
+  export type UserUpdateOneRequiredWithoutBankWithdrawalsNestedInput = {
+    create?: XOR<UserCreateWithoutBankWithdrawalsInput, UserUncheckedCreateWithoutBankWithdrawalsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutBankWithdrawalsInput
+    upsert?: UserUpsertWithoutBankWithdrawalsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutBankWithdrawalsInput, UserUpdateWithoutBankWithdrawalsInput>, UserUncheckedUpdateWithoutBankWithdrawalsInput>
   }
 
   export type UserCreateNestedOneWithoutReviewsGivenInput = {
@@ -27866,6 +31071,23 @@ export namespace Prisma {
     _max?: NestedEnumWalletTransactionStatusFilter<$PrismaModel>
   }
 
+  export type NestedEnumBankWithdrawalStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.BankWithdrawalStatus | EnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.BankWithdrawalStatus[] | ListEnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.BankWithdrawalStatus[] | ListEnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumBankWithdrawalStatusFilter<$PrismaModel> | $Enums.BankWithdrawalStatus
+  }
+
+  export type NestedEnumBankWithdrawalStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.BankWithdrawalStatus | EnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.BankWithdrawalStatus[] | ListEnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.BankWithdrawalStatus[] | ListEnumBankWithdrawalStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumBankWithdrawalStatusWithAggregatesFilter<$PrismaModel> | $Enums.BankWithdrawalStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumBankWithdrawalStatusFilter<$PrismaModel>
+    _max?: NestedEnumBankWithdrawalStatusFilter<$PrismaModel>
+  }
+
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -28458,6 +31680,71 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type BankWithdrawalCreateWithoutUserInput = {
+    id?: string
+    bankName: string
+    accountNumber: string
+    accountName: string
+    bankCode: string
+    amount: Decimal | DecimalJsLike | number | string
+    currency?: $Enums.PaymentCurrency
+    reference: string
+    status?: $Enums.BankWithdrawalStatus
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type BankWithdrawalUncheckedCreateWithoutUserInput = {
+    id?: string
+    bankName: string
+    accountNumber: string
+    accountName: string
+    bankCode: string
+    amount: Decimal | DecimalJsLike | number | string
+    currency?: $Enums.PaymentCurrency
+    reference: string
+    status?: $Enums.BankWithdrawalStatus
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type BankWithdrawalCreateOrConnectWithoutUserInput = {
+    where: BankWithdrawalWhereUniqueInput
+    create: XOR<BankWithdrawalCreateWithoutUserInput, BankWithdrawalUncheckedCreateWithoutUserInput>
+  }
+
+  export type BankWithdrawalCreateManyUserInputEnvelope = {
+    data: BankWithdrawalCreateManyUserInput | BankWithdrawalCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type NotificationPreferencesCreateWithoutUserInput = {
+    id?: string
+    emailNotifications?: boolean
+    smsNotifications?: boolean
+    pushNotifications?: boolean
+    disabledTypes?: NotificationPreferencesCreatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type NotificationPreferencesUncheckedCreateWithoutUserInput = {
+    id?: string
+    emailNotifications?: boolean
+    smsNotifications?: boolean
+    pushNotifications?: boolean
+    disabledTypes?: NotificationPreferencesCreatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type NotificationPreferencesCreateOrConnectWithoutUserInput = {
+    where: NotificationPreferencesWhereUniqueInput
+    create: XOR<NotificationPreferencesCreateWithoutUserInput, NotificationPreferencesUncheckedCreateWithoutUserInput>
+  }
+
   export type DisputeUpsertWithWhereUniqueWithoutInitiatorInput = {
     where: DisputeWhereUniqueInput
     update: XOR<DisputeUpdateWithoutInitiatorInput, DisputeUncheckedUpdateWithoutInitiatorInput>
@@ -28835,6 +32122,72 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"AuditLog"> | Date | string
   }
 
+  export type BankWithdrawalUpsertWithWhereUniqueWithoutUserInput = {
+    where: BankWithdrawalWhereUniqueInput
+    update: XOR<BankWithdrawalUpdateWithoutUserInput, BankWithdrawalUncheckedUpdateWithoutUserInput>
+    create: XOR<BankWithdrawalCreateWithoutUserInput, BankWithdrawalUncheckedCreateWithoutUserInput>
+  }
+
+  export type BankWithdrawalUpdateWithWhereUniqueWithoutUserInput = {
+    where: BankWithdrawalWhereUniqueInput
+    data: XOR<BankWithdrawalUpdateWithoutUserInput, BankWithdrawalUncheckedUpdateWithoutUserInput>
+  }
+
+  export type BankWithdrawalUpdateManyWithWhereWithoutUserInput = {
+    where: BankWithdrawalScalarWhereInput
+    data: XOR<BankWithdrawalUpdateManyMutationInput, BankWithdrawalUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type BankWithdrawalScalarWhereInput = {
+    AND?: BankWithdrawalScalarWhereInput | BankWithdrawalScalarWhereInput[]
+    OR?: BankWithdrawalScalarWhereInput[]
+    NOT?: BankWithdrawalScalarWhereInput | BankWithdrawalScalarWhereInput[]
+    id?: StringFilter<"BankWithdrawal"> | string
+    userId?: StringFilter<"BankWithdrawal"> | string
+    bankName?: StringFilter<"BankWithdrawal"> | string
+    accountNumber?: StringFilter<"BankWithdrawal"> | string
+    accountName?: StringFilter<"BankWithdrawal"> | string
+    bankCode?: StringFilter<"BankWithdrawal"> | string
+    amount?: DecimalFilter<"BankWithdrawal"> | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyFilter<"BankWithdrawal"> | $Enums.PaymentCurrency
+    reference?: StringFilter<"BankWithdrawal"> | string
+    status?: EnumBankWithdrawalStatusFilter<"BankWithdrawal"> | $Enums.BankWithdrawalStatus
+    failureReason?: StringNullableFilter<"BankWithdrawal"> | string | null
+    createdAt?: DateTimeFilter<"BankWithdrawal"> | Date | string
+    updatedAt?: DateTimeFilter<"BankWithdrawal"> | Date | string
+  }
+
+  export type NotificationPreferencesUpsertWithoutUserInput = {
+    update: XOR<NotificationPreferencesUpdateWithoutUserInput, NotificationPreferencesUncheckedUpdateWithoutUserInput>
+    create: XOR<NotificationPreferencesCreateWithoutUserInput, NotificationPreferencesUncheckedCreateWithoutUserInput>
+    where?: NotificationPreferencesWhereInput
+  }
+
+  export type NotificationPreferencesUpdateToOneWithWhereWithoutUserInput = {
+    where?: NotificationPreferencesWhereInput
+    data: XOR<NotificationPreferencesUpdateWithoutUserInput, NotificationPreferencesUncheckedUpdateWithoutUserInput>
+  }
+
+  export type NotificationPreferencesUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    emailNotifications?: BoolFieldUpdateOperationsInput | boolean
+    smsNotifications?: BoolFieldUpdateOperationsInput | boolean
+    pushNotifications?: BoolFieldUpdateOperationsInput | boolean
+    disabledTypes?: NotificationPreferencesUpdatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type NotificationPreferencesUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    emailNotifications?: BoolFieldUpdateOperationsInput | boolean
+    smsNotifications?: BoolFieldUpdateOperationsInput | boolean
+    pushNotifications?: BoolFieldUpdateOperationsInput | boolean
+    disabledTypes?: NotificationPreferencesUpdatedisabledTypesInput | $Enums.NotificationType[]
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type UserCreateWithoutProvidersInput = {
     id?: string
     email?: string | null
@@ -28859,6 +32212,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutProvidersInput = {
@@ -28885,6 +32240,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutProvidersInput = {
@@ -28927,6 +32284,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutProvidersInput = {
@@ -28953,6 +32312,136 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
+  }
+
+  export type UserCreateWithoutNotificationPreferencesInput = {
+    id?: string
+    email?: string | null
+    password: string
+    firstName: string
+    lastName: string
+    phoneNumber?: string | null
+    profileImageUrl?: string | null
+    accountType?: $Enums.AccountType
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    verified?: boolean
+    disputes?: DisputeCreateNestedManyWithoutInitiatorInput
+    moderatedDisputes?: DisputeCreateNestedManyWithoutModeratorInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    providers?: ProviderCreateNestedManyWithoutUserInput
+    asBuyer?: TransactionCreateNestedManyWithoutBuyerInput
+    asSeller?: TransactionCreateNestedManyWithoutSellerInput
+    address?: AddressCreateNestedOneWithoutUsersInput
+    verificationDocuments?: VerificationDocumentCreateNestedManyWithoutUserInput
+    verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    wallet?: WalletCreateNestedOneWithoutUserInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutNotificationPreferencesInput = {
+    id?: string
+    email?: string | null
+    password: string
+    firstName: string
+    lastName: string
+    phoneNumber?: string | null
+    profileImageUrl?: string | null
+    accountType?: $Enums.AccountType
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    verified?: boolean
+    addressId?: string | null
+    disputes?: DisputeUncheckedCreateNestedManyWithoutInitiatorInput
+    moderatedDisputes?: DisputeUncheckedCreateNestedManyWithoutModeratorInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    providers?: ProviderUncheckedCreateNestedManyWithoutUserInput
+    asBuyer?: TransactionUncheckedCreateNestedManyWithoutBuyerInput
+    asSeller?: TransactionUncheckedCreateNestedManyWithoutSellerInput
+    verificationDocuments?: VerificationDocumentUncheckedCreateNestedManyWithoutUserInput
+    verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    wallet?: WalletUncheckedCreateNestedOneWithoutUserInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutNotificationPreferencesInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutNotificationPreferencesInput, UserUncheckedCreateWithoutNotificationPreferencesInput>
+  }
+
+  export type UserUpsertWithoutNotificationPreferencesInput = {
+    update: XOR<UserUpdateWithoutNotificationPreferencesInput, UserUncheckedUpdateWithoutNotificationPreferencesInput>
+    create: XOR<UserCreateWithoutNotificationPreferencesInput, UserUncheckedCreateWithoutNotificationPreferencesInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutNotificationPreferencesInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutNotificationPreferencesInput, UserUncheckedUpdateWithoutNotificationPreferencesInput>
+  }
+
+  export type UserUpdateWithoutNotificationPreferencesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    password?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    accountType?: EnumAccountTypeFieldUpdateOperationsInput | $Enums.AccountType
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    verified?: BoolFieldUpdateOperationsInput | boolean
+    disputes?: DisputeUpdateManyWithoutInitiatorNestedInput
+    moderatedDisputes?: DisputeUpdateManyWithoutModeratorNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    providers?: ProviderUpdateManyWithoutUserNestedInput
+    asBuyer?: TransactionUpdateManyWithoutBuyerNestedInput
+    asSeller?: TransactionUpdateManyWithoutSellerNestedInput
+    address?: AddressUpdateOneWithoutUsersNestedInput
+    verificationDocuments?: VerificationDocumentUpdateManyWithoutUserNestedInput
+    verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    wallet?: WalletUpdateOneWithoutUserNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutNotificationPreferencesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    password?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    accountType?: EnumAccountTypeFieldUpdateOperationsInput | $Enums.AccountType
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    verified?: BoolFieldUpdateOperationsInput | boolean
+    addressId?: NullableStringFieldUpdateOperationsInput | string | null
+    disputes?: DisputeUncheckedUpdateManyWithoutInitiatorNestedInput
+    moderatedDisputes?: DisputeUncheckedUpdateManyWithoutModeratorNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    providers?: ProviderUncheckedUpdateManyWithoutUserNestedInput
+    asBuyer?: TransactionUncheckedUpdateManyWithoutBuyerNestedInput
+    asSeller?: TransactionUncheckedUpdateManyWithoutSellerNestedInput
+    verificationDocuments?: VerificationDocumentUncheckedUpdateManyWithoutUserNestedInput
+    verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    wallet?: WalletUncheckedUpdateOneWithoutUserNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutVerificationDocumentsInput = {
@@ -28979,6 +32468,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutVerificationDocumentsInput = {
@@ -29005,6 +32496,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutVerificationDocumentsInput = {
@@ -29047,6 +32540,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutVerificationDocumentsInput = {
@@ -29073,6 +32568,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserCreateWithoutAddressInput = {
@@ -29099,6 +32596,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAddressInput = {
@@ -29125,6 +32624,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAddressInput = {
@@ -29228,6 +32729,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAsBuyerInput = {
@@ -29254,6 +32757,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAsBuyerInput = {
@@ -29318,6 +32823,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAsSellerInput = {
@@ -29344,6 +32851,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAsSellerInput = {
@@ -29455,6 +32964,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAsBuyerInput = {
@@ -29481,6 +32992,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type PaymentUpsertWithoutTransactionsInput = {
@@ -29557,6 +33070,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAsSellerInput = {
@@ -29583,6 +33098,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type TransactionLogUpsertWithWhereUniqueWithoutTransactionInput = {
@@ -29855,6 +33372,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutWalletInput = {
@@ -29881,6 +33400,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutWalletInput = {
@@ -29961,6 +33482,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutWalletInput = {
@@ -29987,6 +33510,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type WalletTransactionUpsertWithWhereUniqueWithoutWalletInput = {
@@ -30083,6 +33608,134 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type UserCreateWithoutBankWithdrawalsInput = {
+    id?: string
+    email?: string | null
+    password: string
+    firstName: string
+    lastName: string
+    phoneNumber?: string | null
+    profileImageUrl?: string | null
+    accountType?: $Enums.AccountType
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    verified?: boolean
+    disputes?: DisputeCreateNestedManyWithoutInitiatorInput
+    moderatedDisputes?: DisputeCreateNestedManyWithoutModeratorInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    providers?: ProviderCreateNestedManyWithoutUserInput
+    asBuyer?: TransactionCreateNestedManyWithoutBuyerInput
+    asSeller?: TransactionCreateNestedManyWithoutSellerInput
+    address?: AddressCreateNestedOneWithoutUsersInput
+    verificationDocuments?: VerificationDocumentCreateNestedManyWithoutUserInput
+    verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    wallet?: WalletCreateNestedOneWithoutUserInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutBankWithdrawalsInput = {
+    id?: string
+    email?: string | null
+    password: string
+    firstName: string
+    lastName: string
+    phoneNumber?: string | null
+    profileImageUrl?: string | null
+    accountType?: $Enums.AccountType
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    verified?: boolean
+    addressId?: string | null
+    disputes?: DisputeUncheckedCreateNestedManyWithoutInitiatorInput
+    moderatedDisputes?: DisputeUncheckedCreateNestedManyWithoutModeratorInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    providers?: ProviderUncheckedCreateNestedManyWithoutUserInput
+    asBuyer?: TransactionUncheckedCreateNestedManyWithoutBuyerInput
+    asSeller?: TransactionUncheckedCreateNestedManyWithoutSellerInput
+    verificationDocuments?: VerificationDocumentUncheckedCreateNestedManyWithoutUserInput
+    verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    wallet?: WalletUncheckedCreateNestedOneWithoutUserInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutBankWithdrawalsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutBankWithdrawalsInput, UserUncheckedCreateWithoutBankWithdrawalsInput>
+  }
+
+  export type UserUpsertWithoutBankWithdrawalsInput = {
+    update: XOR<UserUpdateWithoutBankWithdrawalsInput, UserUncheckedUpdateWithoutBankWithdrawalsInput>
+    create: XOR<UserCreateWithoutBankWithdrawalsInput, UserUncheckedCreateWithoutBankWithdrawalsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutBankWithdrawalsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutBankWithdrawalsInput, UserUncheckedUpdateWithoutBankWithdrawalsInput>
+  }
+
+  export type UserUpdateWithoutBankWithdrawalsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    password?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    accountType?: EnumAccountTypeFieldUpdateOperationsInput | $Enums.AccountType
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    verified?: BoolFieldUpdateOperationsInput | boolean
+    disputes?: DisputeUpdateManyWithoutInitiatorNestedInput
+    moderatedDisputes?: DisputeUpdateManyWithoutModeratorNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    providers?: ProviderUpdateManyWithoutUserNestedInput
+    asBuyer?: TransactionUpdateManyWithoutBuyerNestedInput
+    asSeller?: TransactionUpdateManyWithoutSellerNestedInput
+    address?: AddressUpdateOneWithoutUsersNestedInput
+    verificationDocuments?: VerificationDocumentUpdateManyWithoutUserNestedInput
+    verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    wallet?: WalletUpdateOneWithoutUserNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutBankWithdrawalsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    password?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    accountType?: EnumAccountTypeFieldUpdateOperationsInput | $Enums.AccountType
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    verified?: BoolFieldUpdateOperationsInput | boolean
+    addressId?: NullableStringFieldUpdateOperationsInput | string | null
+    disputes?: DisputeUncheckedUpdateManyWithoutInitiatorNestedInput
+    moderatedDisputes?: DisputeUncheckedUpdateManyWithoutModeratorNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    providers?: ProviderUncheckedUpdateManyWithoutUserNestedInput
+    asBuyer?: TransactionUncheckedUpdateManyWithoutBuyerNestedInput
+    asSeller?: TransactionUncheckedUpdateManyWithoutSellerNestedInput
+    verificationDocuments?: VerificationDocumentUncheckedUpdateManyWithoutUserNestedInput
+    verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    wallet?: WalletUncheckedUpdateOneWithoutUserNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
+  }
+
   export type UserCreateWithoutReviewsGivenInput = {
     id?: string
     email?: string | null
@@ -30107,6 +33760,8 @@ export namespace Prisma {
     wallet?: WalletCreateNestedOneWithoutUserInput
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutReviewsGivenInput = {
@@ -30133,6 +33788,8 @@ export namespace Prisma {
     wallet?: WalletUncheckedCreateNestedOneWithoutUserInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutReviewsGivenInput = {
@@ -30164,6 +33821,8 @@ export namespace Prisma {
     wallet?: WalletCreateNestedOneWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutReviewsReceivedInput = {
@@ -30190,6 +33849,8 @@ export namespace Prisma {
     wallet?: WalletUncheckedCreateNestedOneWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutReviewsReceivedInput = {
@@ -30232,6 +33893,8 @@ export namespace Prisma {
     wallet?: WalletUpdateOneWithoutUserNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReviewsGivenInput = {
@@ -30258,6 +33921,8 @@ export namespace Prisma {
     wallet?: WalletUncheckedUpdateOneWithoutUserNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserUpsertWithoutReviewsReceivedInput = {
@@ -30295,6 +33960,8 @@ export namespace Prisma {
     wallet?: WalletUpdateOneWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReviewsReceivedInput = {
@@ -30321,6 +33988,8 @@ export namespace Prisma {
     wallet?: WalletUncheckedUpdateOneWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserCreateWithoutDisputesInput = {
@@ -30347,6 +34016,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutDisputesInput = {
@@ -30373,6 +34044,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutDisputesInput = {
@@ -30404,6 +34077,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutModeratedDisputesInput = {
@@ -30430,6 +34105,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutModeratedDisputesInput = {
@@ -30563,6 +34240,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutDisputesInput = {
@@ -30589,6 +34268,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserUpsertWithoutModeratedDisputesInput = {
@@ -30626,6 +34307,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutModeratedDisputesInput = {
@@ -30652,6 +34335,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type TransactionUpsertWithoutDisputeInput = {
@@ -30848,6 +34533,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutNotificationsInput = {
@@ -30874,6 +34561,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutNotificationsInput = {
@@ -30916,6 +34605,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutNotificationsInput = {
@@ -30942,6 +34633,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserCreateWithoutVerificationTokensInput = {
@@ -30968,6 +34661,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutVerificationTokensInput = {
@@ -30994,6 +34689,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     AuditLog?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutVerificationTokensInput = {
@@ -31036,6 +34733,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutVerificationTokensInput = {
@@ -31062,6 +34761,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserCreateWithoutAuditLogInput = {
@@ -31088,6 +34789,8 @@ export namespace Prisma {
     wallet?: WalletCreateNestedOneWithoutUserInput
     reviewsReceived?: ReviewCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    bankWithdrawals?: BankWithdrawalCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesCreateNestedOneWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAuditLogInput = {
@@ -31114,6 +34817,8 @@ export namespace Prisma {
     wallet?: WalletUncheckedCreateNestedOneWithoutUserInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutSellerInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    bankWithdrawals?: BankWithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notificationPreferences?: NotificationPreferencesUncheckedCreateNestedOneWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAuditLogInput = {
@@ -31156,6 +34861,8 @@ export namespace Prisma {
     wallet?: WalletUpdateOneWithoutUserNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAuditLogInput = {
@@ -31182,6 +34889,8 @@ export namespace Prisma {
     wallet?: WalletUncheckedUpdateOneWithoutUserNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type DisputeCreateManyInitiatorInput = {
@@ -31334,6 +35043,21 @@ export namespace Prisma {
     ipAddress?: string | null
     userAgent?: string | null
     createdAt?: Date | string
+  }
+
+  export type BankWithdrawalCreateManyUserInput = {
+    id?: string
+    bankName: string
+    accountNumber: string
+    accountName: string
+    bankCode: string
+    amount: Decimal | DecimalJsLike | number | string
+    currency?: $Enums.PaymentCurrency
+    reference: string
+    status?: $Enums.BankWithdrawalStatus
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type DisputeUpdateWithoutInitiatorInput = {
@@ -31804,6 +35528,51 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type BankWithdrawalUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    bankName?: StringFieldUpdateOperationsInput | string
+    accountNumber?: StringFieldUpdateOperationsInput | string
+    accountName?: StringFieldUpdateOperationsInput | string
+    bankCode?: StringFieldUpdateOperationsInput | string
+    amount?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyFieldUpdateOperationsInput | $Enums.PaymentCurrency
+    reference?: StringFieldUpdateOperationsInput | string
+    status?: EnumBankWithdrawalStatusFieldUpdateOperationsInput | $Enums.BankWithdrawalStatus
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type BankWithdrawalUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    bankName?: StringFieldUpdateOperationsInput | string
+    accountNumber?: StringFieldUpdateOperationsInput | string
+    accountName?: StringFieldUpdateOperationsInput | string
+    bankCode?: StringFieldUpdateOperationsInput | string
+    amount?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyFieldUpdateOperationsInput | $Enums.PaymentCurrency
+    reference?: StringFieldUpdateOperationsInput | string
+    status?: EnumBankWithdrawalStatusFieldUpdateOperationsInput | $Enums.BankWithdrawalStatus
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type BankWithdrawalUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    bankName?: StringFieldUpdateOperationsInput | string
+    accountNumber?: StringFieldUpdateOperationsInput | string
+    accountName?: StringFieldUpdateOperationsInput | string
+    bankCode?: StringFieldUpdateOperationsInput | string
+    amount?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    currency?: EnumPaymentCurrencyFieldUpdateOperationsInput | $Enums.PaymentCurrency
+    reference?: StringFieldUpdateOperationsInput | string
+    status?: EnumBankWithdrawalStatusFieldUpdateOperationsInput | $Enums.BankWithdrawalStatus
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type UserCreateManyAddressInput = {
     id?: string
     email?: string | null
@@ -31842,6 +35611,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAddressInput = {
@@ -31868,6 +35639,8 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutSellerNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     AuditLog?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    bankWithdrawals?: BankWithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notificationPreferences?: NotificationPreferencesUncheckedUpdateOneWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateManyWithoutAddressInput = {

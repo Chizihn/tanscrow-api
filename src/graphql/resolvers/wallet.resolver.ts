@@ -14,10 +14,12 @@ import {
   CreateWalletInput,
   WalletTransactionInput,
 } from "../types/wallet.type";
+import { FundWalletInput } from "../types/wallet.input";
 import {
   WalletTransactionType,
   WalletTransactionStatus,
   PaymentCurrency,
+  PaymentStatus,
 } from "../../generated/prisma-client";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
@@ -86,6 +88,52 @@ export class WalletResolver {
         isActive: true,
       },
       include: { transactions: true },
+    });
+  }
+
+  @Mutation(() => WalletTransaction)
+  @UseMiddleware(isAuthenticated)
+  async fundWallet(
+    @Arg("input") input: FundWalletInput,
+    @Ctx() { user }: GraphQLContext
+  ): Promise<WalletTransaction> {
+    const wallet = await prisma.wallet.findUnique({
+      where: { userId: user?.id },
+    });
+
+    if (!wallet) {
+      throw new Error("Wallet not found");
+    }
+
+    // Generate a unique reference for the payment gateway
+    const gatewayReference = `FUND-${wallet.id}-${Date.now()}`;
+
+    // Create a pending payment record
+    const payment = await prisma.payment.create({
+      data: {
+        amount: input.amount,
+        fee: 0, // No fees for wallet funding
+        totalAmount: input.amount,
+        paymentCurrency: input.currency,
+        paymentGateway: input.paymentGateway,
+        gatewayReference,
+        status: PaymentStatus.PENDING,
+      },
+    });
+
+    // Create a pending wallet transaction
+    return prisma.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        amount: input.amount,
+        currency: input.currency,
+        type: WalletTransactionType.DEPOSIT,
+        reference: gatewayReference,
+        status: WalletTransactionStatus.PENDING,
+        description: "Wallet funding",
+        balanceBefore: wallet.balance,
+        balanceAfter: wallet.balance, // Will be updated when payment is confirmed
+      },
     });
   }
 

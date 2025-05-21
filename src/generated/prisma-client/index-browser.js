@@ -145,6 +145,17 @@ exports.Prisma.ProviderScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.NotificationPreferencesScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  emailNotifications: 'emailNotifications',
+  smsNotifications: 'smsNotifications',
+  pushNotifications: 'pushNotifications',
+  disabledTypes: 'disabledTypes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.VerificationDocumentScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -245,6 +256,22 @@ exports.Prisma.WalletTransactionScalarFieldEnum = {
   balanceBefore: 'balanceBefore',
   balanceAfter: 'balanceAfter',
   status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.BankWithdrawalScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  bankName: 'bankName',
+  accountNumber: 'accountNumber',
+  accountName: 'accountName',
+  bankCode: 'bankCode',
+  amount: 'amount',
+  currency: 'currency',
+  reference: 'reference',
+  status: 'status',
+  failureReason: 'failureReason',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -365,6 +392,14 @@ exports.ProviderType = exports.$Enums.ProviderType = {
   TWITTER: 'TWITTER'
 };
 
+exports.NotificationType = exports.$Enums.NotificationType = {
+  TRANSACTION: 'TRANSACTION',
+  DISPUTE: 'DISPUTE',
+  VERIFICATION: 'VERIFICATION',
+  PAYMENT: 'PAYMENT',
+  SYSTEM: 'SYSTEM'
+};
+
 exports.DocumentType = exports.$Enums.DocumentType = {
   NATIONAL_ID: 'NATIONAL_ID',
   DRIVERS_LICENSE: 'DRIVERS_LICENSE',
@@ -391,6 +426,7 @@ exports.TransactionStatus = exports.$Enums.TransactionStatus = {
   COMPLETED: 'COMPLETED',
   DELIVERED: 'DELIVERED',
   CANCELED: 'CANCELED',
+  FAILED: 'FAILED',
   DISPUTED: 'DISPUTED',
   REFUND_REQUESTED: 'REFUND_REQUESTED',
   REFUNDED: 'REFUNDED'
@@ -399,6 +435,7 @@ exports.TransactionStatus = exports.$Enums.TransactionStatus = {
 exports.EscrowStatus = exports.$Enums.EscrowStatus = {
   NOT_FUNDED: 'NOT_FUNDED',
   FUNDED: 'FUNDED',
+  DISPUTED: 'DISPUTED',
   RELEASED: 'RELEASED',
   REFUNDED: 'REFUNDED',
   PARTIALLY_REFUNDED: 'PARTIALLY_REFUNDED'
@@ -437,6 +474,7 @@ exports.WalletTransactionType = exports.$Enums.WalletTransactionType = {
   ESCROW_FUNDING: 'ESCROW_FUNDING',
   ESCROW_RELEASE: 'ESCROW_RELEASE',
   ESCROW_REFUND: 'ESCROW_REFUND',
+  PAYMENT: 'PAYMENT',
   FEE_PAYMENT: 'FEE_PAYMENT',
   BONUS: 'BONUS'
 };
@@ -448,6 +486,13 @@ exports.WalletTransactionStatus = exports.$Enums.WalletTransactionStatus = {
   REVERSED: 'REVERSED'
 };
 
+exports.BankWithdrawalStatus = exports.$Enums.BankWithdrawalStatus = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED'
+};
+
 exports.DisputeStatus = exports.$Enums.DisputeStatus = {
   OPENED: 'OPENED',
   IN_REVIEW: 'IN_REVIEW',
@@ -455,14 +500,6 @@ exports.DisputeStatus = exports.$Enums.DisputeStatus = {
   RESOLVED_FOR_SELLER: 'RESOLVED_FOR_SELLER',
   RESOLVED_COMPROMISE: 'RESOLVED_COMPROMISE',
   CLOSED: 'CLOSED'
-};
-
-exports.NotificationType = exports.$Enums.NotificationType = {
-  TRANSACTION: 'TRANSACTION',
-  DISPUTE: 'DISPUTE',
-  VERIFICATION: 'VERIFICATION',
-  PAYMENT: 'PAYMENT',
-  SYSTEM: 'SYSTEM'
 };
 
 exports.TokenType = exports.$Enums.TokenType = {
@@ -503,6 +540,7 @@ exports.AuditCategory = exports.$Enums.AuditCategory = {
 exports.Prisma.ModelName = {
   User: 'User',
   Provider: 'Provider',
+  NotificationPreferences: 'NotificationPreferences',
   VerificationDocument: 'VerificationDocument',
   Address: 'Address',
   Transaction: 'Transaction',
@@ -510,6 +548,7 @@ exports.Prisma.ModelName = {
   Payment: 'Payment',
   Wallet: 'Wallet',
   WalletTransaction: 'WalletTransaction',
+  BankWithdrawal: 'BankWithdrawal',
   Review: 'Review',
   Dispute: 'Dispute',
   DisputeEvidence: 'DisputeEvidence',

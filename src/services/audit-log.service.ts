@@ -22,18 +22,29 @@ export class AuditLogService {
     const { userId, entityId, entityType, action, category, details, request } =
       data;
 
-    await this.prisma.auditLog.create({
-      data: {
-        userId,
-        entityId,
-        entityType,
-        action,
-        category,
-        details,
-        ipAddress: request?.ip,
-        userAgent: request?.headers["user-agent"],
-      },
-    });
+    const baseData = {
+      action,
+      category: category || AuditCategory.SYSTEM,
+      entityId,
+      entityType,
+      details,
+      request,
+    };
+
+    // Only include userId if it exists and is not 'system'
+    if (userId && userId !== "system") {
+      await this.prisma.auditLog.create({
+        data: {
+          ...baseData,
+          user: { connect: { id: userId } },
+        },
+      });
+    } else {
+      // Create log without user relation
+      await this.prisma.auditLog.create({
+        data: baseData,
+      });
+    }
   }
 
   async logUserAction(

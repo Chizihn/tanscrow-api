@@ -11,6 +11,26 @@ export const isAuthenticated: MiddlewareFn<GraphQLContext> = async (
   return next();
 };
 
+export const isVerified: MiddlewareFn<GraphQLContext> = async (
+  { context },
+  next
+) => {
+  if (!context.user || !context.user.verified) {
+    throw new Error("Not authorized");
+  }
+  return next();
+};
+
+// export const isDocumentVerified: MiddlewareFn<GraphQLContext> = async (
+//   { context },
+//   next
+// ) => {
+//   if (!context.user || context.user.) {
+//     throw new Error("Not authorized");
+//   }
+//   return next();
+// };
+
 export const isAdmin: MiddlewareFn<GraphQLContext> = async (
   { context },
   next

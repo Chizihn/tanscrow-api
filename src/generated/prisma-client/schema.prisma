@@ -9,31 +9,33 @@ datasource db {
 }
 
 model User {
-  id                    String                 @id @default(uuid())
-  email                 String?                @unique
-  password              String
-  firstName             String
-  lastName              String
-  phoneNumber           String?                @unique
-  profileImageUrl       String?
-  accountType           AccountType            @default(USER)
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  verified              Boolean                @default(false)
-  addressId             String?
-  disputes              Dispute[]              @relation("disputeUser")
-  moderatedDisputes     Dispute[]              @relation("moderator")
-  notifications         Notification[]
-  providers             Provider[]
-  asBuyer               Transaction[]          @relation("buyer")
-  asSeller              Transaction[]          @relation("seller")
-  address               Address?               @relation(fields: [addressId], references: [id])
-  verificationDocuments VerificationDocument[]
-  verificationTokens    VerificationToken[]
-  wallet                Wallet?
-  reviewsReceived       Review[]               @relation("sellerReviews")
-  reviewsGiven          Review[]               @relation("reviewerReviews")
-  AuditLog              AuditLog[]
+  id                      String                   @id @default(uuid())
+  email                   String?                  @unique
+  password                String
+  firstName               String
+  lastName                String
+  phoneNumber             String?                  @unique
+  profileImageUrl         String?
+  accountType             AccountType              @default(USER)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  verified                Boolean                  @default(false)
+  addressId               String?
+  disputes                Dispute[]                @relation("disputeUser")
+  moderatedDisputes       Dispute[]                @relation("moderator")
+  notifications           Notification[]
+  providers               Provider[]
+  asBuyer                 Transaction[]            @relation("buyer")
+  asSeller                Transaction[]            @relation("seller")
+  address                 Address?                 @relation(fields: [addressId], references: [id])
+  verificationDocuments   VerificationDocument[]
+  verificationTokens      VerificationToken[]
+  wallet                  Wallet?
+  reviewsReceived         Review[]                 @relation("sellerReviews")
+  reviewsGiven            Review[]                 @relation("reviewerReviews")
+  AuditLog                AuditLog[]
+  bankWithdrawals         BankWithdrawal[]
+  notificationPreferences NotificationPreferences?
 
   @@index([email])
   @@index([phoneNumber])
@@ -50,6 +52,20 @@ model Provider {
   user         User         @relation(fields: [userId], references: [id])
 
   @@index([providerId])
+  @@index([userId])
+}
+
+model NotificationPreferences {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  emailNotifications Boolean            @default(true)
+  smsNotifications   Boolean            @default(true)
+  pushNotifications  Boolean            @default(false)
+  disabledTypes      NotificationType[] @default([])
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
@@ -185,6 +201,34 @@ model WalletTransaction {
   @@index([walletId])
   @@index([reference])
   @@index([type])
+}
+
+model BankWithdrawal {
+  id            String               @id @default(uuid())
+  userId        String
+  bankName      String
+  accountNumber String
+  accountName   String
+  bankCode      String
+  amount        Decimal              @db.Decimal(10, 2)
+  currency      PaymentCurrency      @default(NGN)
+  reference     String               @unique
+  status        BankWithdrawalStatus @default(PENDING)
+  failureReason String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  user          User                 @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([reference])
+  @@index([status])
+}
+
+enum BankWithdrawalStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
 model Review {
@@ -333,6 +377,7 @@ enum TransactionStatus {
   COMPLETED
   DELIVERED
   CANCELED
+  FAILED
   DISPUTED
   REFUND_REQUESTED
   REFUNDED
@@ -341,7 +386,9 @@ enum TransactionStatus {
 enum EscrowStatus {
   NOT_FUNDED
   FUNDED
+  DISPUTED
   RELEASED
+
   REFUNDED
   PARTIALLY_REFUNDED
 }
@@ -383,6 +430,7 @@ enum WalletTransactionType {
   ESCROW_FUNDING
   ESCROW_RELEASE
   ESCROW_REFUND
+  PAYMENT
   FEE_PAYMENT
   BONUS
 }

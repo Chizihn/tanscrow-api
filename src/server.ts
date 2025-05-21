@@ -37,10 +37,11 @@ const startServer = async () => {
     // Apply Apollo middleware to Express
     app.use(
       "/graphql",
-      cors<cors.CorsRequest>(),
+      cors<cors.CorsRequest>({
+        origin: "http://localhost:3000",
+        credentials: true, // Enable credentials (cookies)
+      }),
       express.json(),
-      // expressMiddleware accepts the same arguments:
-      // an Apollo Server instance and optional configuration options
       expressMiddleware(apolloServer, {
         context: createContext,
       })

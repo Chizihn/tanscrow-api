@@ -26,9 +26,44 @@ input AddPhoneInput {
   phoneNumber: String!
 }
 
+type Address {
+  city: String!
+  country: String!
+  createdAt: DateTimeISO!
+  id: ID!
+  postalCode: String!
+  state: String!
+  street: String!
+  updatedAt: DateTimeISO!
+}
+
 type AuthResponse {
   token: String!
   user: User!
+}
+
+type BankWithdrawal {
+  accountName: String!
+  accountNumber: String!
+  amount: Float!
+  bankCode: String!
+  bankName: String!
+  createdAt: DateTimeISO!
+  currency: PaymentCurrency!
+  failureReason: String
+  id: ID!
+  reference: String
+  status: BankWithdrawalStatus!
+  updatedAt: DateTimeISO!
+  userId: String!
+}
+
+"""The status of a bank withdrawal request"""
+enum BankWithdrawalStatus {
+  COMPLETED
+  FAILED
+  PENDING
+  PROCESSING
 }
 
 input CancelTransactionInput {
@@ -53,6 +88,7 @@ input CreateReviewInput {
 
 input CreateTransactionInput {
   amount: Float!
+  buyerId: ID!
   deliveryMethod: DeliveryMethod
   description: String!
   expectedDeliveryDate: DateTimeISO
@@ -127,6 +163,7 @@ enum DocumentType {
 
 """The status of escrow funds"""
 enum EscrowStatus {
+  DISPUTED
   FUNDED
   NOT_FUNDED
   PARTIALLY_REFUNDED
@@ -136,6 +173,12 @@ enum EscrowStatus {
 
 input ForgotPasswordInput {
   email: String!
+}
+
+input FundWalletInput {
+  amount: Float!
+  currency: PaymentCurrency!
+  paymentGateway: PaymentGateway!
 }
 
 """
@@ -150,18 +193,24 @@ input MarkNotificationReadInput {
 type Mutation {
   addDisputeEvidence(input: AddDisputeEvidenceInput!): Dispute!
   addEmailToAccount(email: String!): User!
+
+  """Account create via phone number linking their email"""
   addEmailToPhoneAccount(input: AddEmailInput!): User!
   addPhoneToAccount(phoneNumber: String!): User!
+
+  """An account created with email linking phone number"""
   addPhoneToEmailAccount(input: AddPhoneInput!): User!
   cancelTransaction(input: CancelTransactionInput!): Transaction!
+
+  """User changing password"""
   changePassword(input: ChangePasswordInput!): User!
   confirmDelivery(input: ConfirmDeliveryInput!): Transaction!
   createReview(input: CreateReviewInput!): Review!
   createTransaction(input: CreateTransactionInput!): Transaction!
   createWallet(input: CreateWalletInput!): Wallet!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
-  handleFlutterwaveWebhook(payload: JSONObject!, signature: String!): Boolean!
-  handlePaystackWebhook(payload: JSONObject!, signature: String!): Boolean!
+  fundWallet(input: FundWalletInput!): WalletTransaction!
+  handleWebhook(gateway: PaymentGateway!, payload: JSONObject!, signature: String!): Boolean!
   markAllNotificationsRead: Boolean!
   markNotificationRead(input: MarkNotificationReadInput!): Notification!
   openDispute(input: OpenDisputeInput!): Dispute!
@@ -173,16 +222,26 @@ type Mutation {
   resendVerificationEmail(input: ResendVerificationEmailInput!): Boolean!
   resetPassword(input: ResetPasswordInput!): Boolean!
   resolveDispute(input: ResolveDisputeInput!): Dispute!
+
+  """Review and update the status of a verification document"""
   reviewVerificationDocument(input: ReviewVerificationDocumentInput!): VerificationDocument!
   signinWithEmail(input: SigninWithEmailInput!): AuthResponse!
   signinWithPhone(input: SigninWithPhoneInput!): AuthResponse!
   signupWithEmail(input: SignupWithEmailInput!): AuthResponse!
   signupWithPhone(input: SignupWithPhoneInput!): AuthResponse!
+
+  """Submit a new verification document for review"""
   submitVerificationDocument(input: SubmitVerificationDocumentInput!): VerificationDocument!
   updateDelivery(input: UpdateDeliveryInput!): Transaction!
+
+  """User updating their profile"""
   updateProfile(input: UpdateProfileInput!): User!
+
+  """Update user's profile image URL"""
+  updateProfileImage(profileImageUrl: String!): User!
   verifyEmail(input: VerifyEmailInput!): Boolean!
   verifyPhoneOtp(input: VerifyPhoneOtpInput!): Boolean!
+  withdrawToNigerianBank(input: WithdrawToNigerianBankInput!): BankWithdrawal!
 }
 
 type Notification {
@@ -249,9 +308,27 @@ enum PaymentStatus {
 }
 
 input ProcessPaymentInput {
-  gatewayReference: String!
   paymentGateway: PaymentGateway!
   transactionId: ID!
+}
+
+type Provider {
+  createdAt: DateTimeISO!
+  id: ID!
+  provider: ProviderType!
+  providerId: String!
+  refreshToken: String
+  tokenExpiry: DateTimeISO
+  userId: String!
+}
+
+"""The type of authentication provider"""
+enum ProviderType {
+  EMAIL
+  FACEBOOK
+  GOOGLE
+  PHONE
+  TWITTER
 }
 
 type Query {
@@ -261,15 +338,28 @@ type Query {
 
   """Get current user"""
   me: User
+
+  """Retrieve verification documents for the authenticated user"""
   myVerificationDocuments: [VerificationDocument!]!
   notifications: [Notification!]!
+
+  """Retrieve pending verification documents for admin review"""
   pendingVerificationDocuments: [VerificationDocument!]!
+
+  """Find user by email adress or phone number"""
+  searchUser(input: String!): User
   transaction(id: ID!): Transaction!
   transactions: [Transaction!]!
   unreadNotifications: [Notification!]!
 
   """Find user by id"""
   user(id: String!): User
+
+  """Fetch reviews given by user"""
+  userReviewsGiven: [Review!]!
+
+  """Fetch reviews received by user"""
+  userReviewsReceived: [Review!]!
 
   """Fetch all users"""
   users: [User!]!
@@ -399,6 +489,7 @@ enum TransactionStatus {
   COMPLETED
   DELIVERED
   DISPUTED
+  FAILED
   IN_PROGRESS
   PENDING
   REFUNDED
@@ -419,13 +510,22 @@ input UpdateDeliveryInput {
 }
 
 input UpdateProfileInput {
+  addressId: String
+  city: String
+  country: String
   firstName: String
   lastName: String
+  phoneNumber: String
+  postalCode: String
   profileImageUrl: String
+  state: String
+  street: String
 }
 
 type User {
   accountType: AccountType!
+  address: Address
+  addressId: String
   createdAt: DateTimeISO!
   email: String
   firstName: String!
@@ -433,6 +533,7 @@ type User {
   lastName: String!
   phoneNumber: String
   profileImageUrl: String
+  providers: [Provider!]!
   updatedAt: DateTimeISO!
   verified: Boolean!
 }
@@ -519,5 +620,15 @@ enum WalletTransactionType {
   ESCROW_REFUND
   ESCROW_RELEASE
   FEE_PAYMENT
+  PAYMENT
   WITHDRAWAL
+}
+
+input WithdrawToNigerianBankInput {
+  accountName: String!
+  accountNumber: String!
+  amount: Float!
+  bankCode: String!
+  bankName: String!
+  currency: PaymentCurrency!
 }

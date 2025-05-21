@@ -23,6 +23,20 @@ export class ReviewResolver {
     });
   }
 
+  @Query(() => [Review], { description: "Fetch reviews received by user" })
+  @UseMiddleware(isAuthenticated)
+  async userReviewsReceived(
+    @Ctx() { user }: GraphQLContext
+  ): Promise<Review[]> {
+    return prisma.review.findMany({ where: { sellerId: user?.id } });
+  }
+
+  @Query(() => [Review], { description: "Fetch reviews given by user" })
+  @UseMiddleware(isAuthenticated)
+  async userReviewsGiven(@Ctx() { user }: GraphQLContext): Promise<Review[]> {
+    return prisma.review.findMany({ where: { reviewerId: user?.id } });
+  }
+
   @Mutation(() => Review)
   @UseMiddleware(isAuthenticated)
   async createReview(
