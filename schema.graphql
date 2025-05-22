@@ -210,7 +210,6 @@ type Mutation {
   createWallet(input: CreateWalletInput!): Wallet!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
   fundWallet(input: FundWalletInput!): WalletTransaction!
-  handleWebhook(gateway: PaymentGateway!, payload: JSONObject!, signature: String!): Boolean!
   markAllNotificationsRead: Boolean!
   markNotificationRead(input: MarkNotificationReadInput!): Notification!
   openDispute(input: OpenDisputeInput!): Dispute!
@@ -334,6 +333,7 @@ enum ProviderType {
 type Query {
   dispute(id: String!): Dispute!
   disputes: [Dispute!]!
+  getPaymentDetails(reference: String!): JSONObject
   getSellerReviews(sellerId: String!): [Review!]!
 
   """Get current user"""
@@ -363,6 +363,7 @@ type Query {
 
   """Fetch all users"""
   users: [User!]!
+  verifyPayment(gateway: PaymentGateway!, reference: String!): Boolean!
   wallet: Wallet!
   walletTransactions: [WalletTransaction!]!
 }

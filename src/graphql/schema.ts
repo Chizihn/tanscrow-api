@@ -7,7 +7,7 @@ import { VerificationResolver } from "./resolvers/verification.resolver";
 import { DisputeResolver } from "./resolvers/dispute.resolver";
 import { WalletResolver } from "./resolvers/wallet.resolver";
 import { NotificationResolver } from "./resolvers/notification.resolver";
-import { PaymentWebhookResolver } from "./resolvers/payment-webhook.resolver";
+import { PaymentResolver } from "./resolvers/payment.resolver";
 import { WithdrawalResolver } from "./resolvers/withdrawal.resolver";
 
 export const createSchema = async () => {
@@ -21,7 +21,7 @@ export const createSchema = async () => {
       DisputeResolver,
       WalletResolver,
       NotificationResolver,
-      PaymentWebhookResolver,
+      PaymentResolver,
       WithdrawalResolver,
     ],
     validate: false,

@@ -129,6 +129,7 @@ export class TransactionResolver {
       },
     });
   }
+
   @Mutation(() => Transaction)
   @UseMiddleware(isAuthenticated)
   async processPayment(
@@ -137,76 +138,123 @@ export class TransactionResolver {
   ): Promise<Transaction> {
     // Begin transaction to ensure all database operations are atomic
     return prisma.$transaction(async (tx) => {
-      const transaction = await tx.transaction.findUnique({
-        where: { id: input.transactionId },
-        include: { payment: true, logs: true },
-      });
+      try {
+        // Log the beginning of transaction for debugging
+        console.log(
+          `Starting payment processing for transaction ${input.transactionId}`
+        );
 
-      if (!transaction) throw new Error("Transaction not found");
-      if (transaction.buyerId !== user?.id)
-        throw new Error("Only the buyer can process payment");
-      if (transaction.isPaid) throw new Error("Transaction is already paid");
+        const transaction = await tx.transaction.findUnique({
+          where: { id: input.transactionId },
+          include: { payment: true, logs: true },
+        });
 
-      // Check if there's already a payment in progress
-      if (
-        transaction.payment &&
-        transaction.payment.status === PaymentStatus.PENDING
-      ) {
-        // Clean up existing payment attempt and all related logs
-        if (transaction.logs) {
-          const paymentLogs = transaction.logs.filter(
-            (log) =>
-              (log.action === "PAYMENT_INITIATED" ||
-                log.action === "PAYMENT") &&
-              log.status !== TransactionStatus.COMPLETED
+        if (!transaction) {
+          console.error(`Transaction not found: ${input.transactionId}`);
+          throw new Error("Transaction not found");
+        }
+
+        if (transaction.buyerId !== user?.id) {
+          console.error(
+            `Auth error: User ${user?.id} is not the buyer ${transaction.buyerId}`
+          );
+          throw new Error("Only the buyer can process payment");
+        }
+
+        if (transaction.isPaid) {
+          console.error(`Transaction ${input.transactionId} is already paid`);
+          throw new Error("Transaction is already paid");
+        }
+
+        // Enforce wallet-only payments
+        if (input.paymentGateway !== PaymentGateway.WALLET) {
+          throw new Error("Only wallet payments are accepted for transactions");
+        }
+
+        console.log(`Transaction validation passed for ${input.transactionId}`);
+
+        // Generate a unique reference for the payment
+        const paymentReference = `PAY-${transaction.transactionCode}-${crypto
+          .randomUUID()
+          .substring(0, 8)}`;
+
+        console.log(`Generated payment reference: ${paymentReference}`);
+
+        // Check if there's already a payment in progress and clean it up
+        if (
+          transaction.payment &&
+          transaction.payment.status === PaymentStatus.PENDING
+        ) {
+          console.log(
+            `Cleaning up existing pending payment for transaction ${input.transactionId}`
           );
 
-          for (const log of paymentLogs) {
-            await tx.transactionLog.delete({
-              where: { id: log.id },
+          // Clean up existing payment logs
+          if (transaction.logs && transaction.logs.length > 0) {
+            const paymentLogs = transaction.logs.filter(
+              (log) =>
+                (log.action === "PAYMENT_INITIATED" ||
+                  log.action === "PAYMENT") &&
+                log.status !== TransactionStatus.COMPLETED
+            );
+
+            for (const log of paymentLogs) {
+              console.log(`Deleting payment log: ${log.id}`);
+              await tx.transactionLog.delete({
+                where: { id: log.id },
+              });
+            }
+          }
+
+          // Delete the pending payment record
+          if (transaction.payment.id) {
+            console.log(`Deleting pending payment: ${transaction.payment.id}`);
+            await tx.payment.delete({
+              where: { id: transaction.payment.id },
             });
           }
         }
 
-        // Delete the pending payment record
-        if (transaction.payment.id) {
-          await tx.payment.delete({
-            where: { id: transaction.payment.id },
-          });
-        }
-      }
+        console.log(
+          `Processing wallet payment for transaction ${input.transactionId}`
+        );
 
-      // Generate a unique reference for the payment gateway using UUID
-      // Much more secure than using timestamp which can be predicted
-      const gatewayReference = `PAY-${transaction.transactionCode}-${crypto
-        .randomUUID()
-        .substring(0, 8)}`;
-
-      // Handle wallet payment
-      if (input.paymentGateway === PaymentGateway.WALLET) {
         const wallet = await tx.wallet.findUnique({
           where: { userId: user?.id },
         });
 
         if (!wallet) {
+          console.error(`Wallet not found for user ${user?.id}`);
           throw new Error(
             "You don't have a wallet. Visit the wallet page to create one."
           );
         }
 
-        if (wallet.balance.lessThan(transaction.totalAmount)) {
+        // Convert to same type for comparison (using Decimal.js)
+        const walletBalance = new Decimal(wallet.balance.toString());
+        const transactionTotal = new Decimal(
+          transaction.totalAmount.toString()
+        );
+
+        if (walletBalance.lessThan(transactionTotal)) {
+          console.error(
+            `Insufficient balance: ${walletBalance} < ${transactionTotal}`
+          );
           throw new Error("Insufficient wallet balance");
         }
 
         // Create payment record
+        console.log(
+          `Creating wallet payment record for transaction ${input.transactionId}`
+        );
         const payment = await tx.payment.create({
           data: {
             amount: transaction.amount,
             fee: transaction.escrowFee,
             totalAmount: transaction.totalAmount,
             paymentCurrency: transaction.paymentCurrency,
-            paymentGateway: input.paymentGateway,
-            gatewayReference: gatewayReference,
+            paymentGateway: PaymentGateway.WALLET,
+            gatewayReference: paymentReference,
             status: PaymentStatus.SUCCESSFUL,
           },
         });
@@ -215,6 +263,10 @@ export class TransactionResolver {
         const balanceBefore = wallet.balance;
         const balanceAfter = wallet.balance.sub(transaction.totalAmount);
 
+        console.log(
+          `Updating wallet balance from ${balanceBefore} to ${balanceAfter}`
+        );
+
         // Create wallet transaction
         await tx.walletTransaction.create({
           data: {
@@ -222,7 +274,7 @@ export class TransactionResolver {
             amount: transaction.totalAmount,
             currency: transaction.paymentCurrency,
             type: WalletTransactionType.PAYMENT,
-            reference: gatewayReference,
+            reference: paymentReference,
             status: WalletTransactionStatus.COMPLETED,
             description: `Payment for transaction ${transaction.transactionCode}`,
             balanceBefore,
@@ -259,6 +311,10 @@ export class TransactionResolver {
               },
             };
 
+        console.log(
+          `Finalizing wallet payment for transaction ${input.transactionId}`
+        );
+
         return tx.transaction.update({
           where: { id: input.transactionId },
           data: {
@@ -275,296 +331,19 @@ export class TransactionResolver {
             logs: true,
           },
         });
-      }
-
-      // Handle payment gateway payments (Flutterwave/Paystack)
-      try {
-        // Create initial payment record
-        const payment = await tx.payment.create({
-          data: {
-            amount: transaction.amount,
-            fee: transaction.escrowFee,
-            totalAmount: transaction.totalAmount,
-            paymentCurrency: transaction.paymentCurrency,
-            paymentGateway: input.paymentGateway,
-            gatewayReference: gatewayReference,
-            status: PaymentStatus.PENDING,
-          },
-        });
-
-        // Initialize payment with gateway
-        const paymentService = PaymentService.getInstance();
-        const buyer = await tx.user.findUnique({
-          where: { id: transaction.buyerId },
-          select: { email: true, firstName: true, lastName: true }, // Get name for better payment tracking
-        });
-
-        if (!buyer?.email) {
-          throw new Error("Buyer email is required for payment");
-        }
-
-        const paymentInitiation = await paymentService.initiatePayment(
-          transaction.id,
-          transaction.totalAmount.toNumber(),
-          buyer.email,
-          input.paymentGateway
-        );
-
-        if (!paymentInitiation.success) {
-          // Handle failed payment initiation by cleaning up
-          await tx.payment.delete({
-            where: { id: payment.id },
-          });
-
-          throw new Error(
-            paymentInitiation.error || "Failed to initiate payment"
-          );
-        }
-
-        // Securely store gateway response data - only store necessary information
-        const gatewayResponse = {
-          redirectUrl: paymentInitiation.redirectUrl,
-          timestamp: new Date().toISOString(),
-          reference: paymentInitiation.reference || gatewayReference,
-          // Only include essential data needed for verification
-        };
-
-        // Update payment with verified gateway reference and response
-        await tx.payment.update({
-          where: { id: payment.id },
-          data: {
-            gatewayReference: paymentInitiation.reference || gatewayReference,
-            gatewayResponse: gatewayResponse,
-          },
-        });
-
-        // First check if there's already a pending payment log to prevent duplicates
-        const existingPendingLog = transaction.logs?.find(
-          (log) =>
-            log.action === "PAYMENT_INITIATED" &&
-            log.status === TransactionStatus.PENDING &&
-            log.escrowStatus === EscrowStatus.NOT_FUNDED
-        );
-
-        // Create a new log only if one doesn't already exist
-        const logData = existingPendingLog
-          ? {}
-          : {
-              logs: {
-                create: {
-                  action: "PAYMENT_INITIATED",
-                  status: TransactionStatus.PENDING,
-                  escrowStatus: EscrowStatus.NOT_FUNDED,
-                  performedBy: user?.id,
-                  description: `Payment initiated with ${input.paymentGateway}`,
-                },
-              },
-            };
-
-        return tx.transaction.update({
-          where: { id: input.transactionId },
-          data: {
-            paymentId: payment.id,
-            isPaid: false, // Will be set to true after payment confirmation
-            status: TransactionStatus.PENDING,
-            escrowStatus: EscrowStatus.NOT_FUNDED, // Explicitly set escrow status
-            ...logData,
-          },
-          include: {
-            buyer: true,
-            seller: true,
-            payment: true,
-            logs: true,
-          },
-        });
       } catch (error) {
-        // Log the error for debugging (optional)
+        // Enhanced error logging
         console.error("Payment processing error:", error);
+        console.error(
+          "Error details:",
+          error instanceof Error ? error.stack : "No stack trace"
+        );
 
         // Re-throw the error to be handled by the caller
         throw error;
       }
     });
   }
-
-  // @Mutation(() => Transaction)
-  // @UseMiddleware(isAuthenticated)
-  // async processPayment(
-  //   @Arg("input") input: ProcessPaymentInput,
-  //   @Ctx() { user }: GraphQLContext
-  // ): Promise<Transaction> {
-  //   const transaction = await prisma.transaction.findUnique({
-  //     where: { id: input.transactionId },
-  //     include: { payment: true },
-  //   });
-
-  //   if (!transaction) throw new Error("Transaction not found");
-  //   if (transaction.buyerId !== user?.id)
-  //     throw new Error("Only the buyer can process payment");
-  //   if (transaction.isPaid) throw new Error("Transaction is already paid");
-
-  //   // Generate a unique reference for the payment gateway
-  //   const gatewayReference = `PAY-${transaction.transactionCode}-${Date.now()}`;
-
-  //   // Handle wallet payment
-  //   if (input.paymentGateway === PaymentGateway.WALLET) {
-  //     const wallet = await prisma.wallet.findUnique({
-  //       where: { userId: user?.id },
-  //     });
-
-  //     if (!wallet) {
-  //       throw new Error(
-  //         "You don't have a wallet. Visit the wallet page to create one.."
-  //       );
-  //     }
-
-  //     if (wallet.balance.lessThan(transaction.totalAmount)) {
-  //       throw new Error("Insufficient wallet balance");
-  //     }
-
-  //     // Create payment record
-  //     const payment = await prisma.payment.create({
-  //       data: {
-  //         amount: transaction.amount,
-  //         fee: transaction.escrowFee,
-  //         totalAmount: transaction.totalAmount,
-  //         paymentCurrency: transaction.paymentCurrency,
-  //         paymentGateway: input.paymentGateway,
-  //         gatewayReference: gatewayReference,
-  //         status: PaymentStatus.SUCCESSFUL,
-  //       },
-  //     });
-
-  //     // Update wallet balance
-  //     const balanceBefore = wallet.balance;
-  //     const balanceAfter = wallet.balance.sub(transaction.totalAmount);
-
-  //     await prisma.$transaction(async (tx) => {
-  //       // Create wallet transaction
-  //       await tx.walletTransaction.create({
-  //         data: {
-  //           walletId: wallet.id,
-  //           amount: transaction.totalAmount,
-  //           currency: transaction.paymentCurrency,
-  //           type: WalletTransactionType.PAYMENT,
-  //           reference: gatewayReference,
-  //           status: WalletTransactionStatus.COMPLETED,
-  //           description: `Payment for transaction ${transaction.transactionCode}`,
-  //           balanceBefore,
-  //           balanceAfter,
-  //         },
-  //       });
-
-  //       // Update wallet balance
-  //       await tx.wallet.update({
-  //         where: { id: wallet.id },
-  //         data: { balance: balanceAfter },
-  //       });
-  //     });
-
-  //     return prisma.transaction.update({
-  //       where: { id: input.transactionId },
-  //       data: {
-  //         paymentId: payment.id,
-  //         isPaid: true,
-  //         status: TransactionStatus.IN_PROGRESS,
-  //         escrowStatus: EscrowStatus.FUNDED,
-  //         logs: {
-  //           create: {
-  //             action: "PAYMENT",
-  //             status: TransactionStatus.IN_PROGRESS,
-  //             escrowStatus: EscrowStatus.FUNDED,
-  //             performedBy: user?.id,
-  //             description: "Payment processed using wallet",
-  //           },
-  //         },
-  //       },
-  //       include: {
-  //         buyer: true,
-  //         seller: true,
-  //         payment: true,
-  //         logs: true,
-  //       },
-  //     });
-  //   }
-
-  //   // Handle payment gateway payments (Flutterwave/Paystack)
-  //   const payment = await prisma.payment.create({
-  //     data: {
-  //       amount: transaction.amount,
-  //       fee: transaction.escrowFee,
-  //       totalAmount: transaction.totalAmount,
-  //       paymentCurrency: transaction.paymentCurrency,
-  //       paymentGateway: input.paymentGateway,
-  //       gatewayReference: gatewayReference,
-  //       status: PaymentStatus.PENDING,
-  //     },
-  //   });
-
-  //   // Initialize payment with gateway
-  //   const paymentService = PaymentService.getInstance();
-  //   const buyer = await prisma.user.findUnique({
-  //     where: { id: transaction.buyerId },
-  //     select: { email: true },
-  //   });
-
-  //   if (!buyer?.email) {
-  //     throw new Error("Buyer email is required for payment");
-  //   }
-
-  //   const paymentInitiation = await paymentService.initiatePayment(
-  //     transaction.id,
-  //     transaction.totalAmount.toNumber(),
-  //     buyer.email,
-  //     input.paymentGateway
-  //   );
-
-  //   if (!paymentInitiation.success) {
-  //     throw new Error(paymentInitiation.error || "Failed to initiate payment");
-  //   }
-
-  //   // Update payment with gateway reference
-  //   await prisma.payment.update({
-  //     where: { id: payment.id },
-  //     data: {
-  //       gatewayReference: paymentInitiation.reference || gatewayReference,
-  //     },
-  //   });
-
-  //   const updatedTransaction = await prisma.transaction.update({
-  //     where: { id: input.transactionId },
-  //     data: {
-  //       paymentId: payment.id,
-  //       isPaid: false, // Will be set to true after payment confirmation
-  //       status: TransactionStatus.PENDING,
-  //       logs: {
-  //         create: {
-  //           action: "PAYMENT_INITIATED",
-  //           status: TransactionStatus.PENDING,
-  //           escrowStatus: EscrowStatus.NOT_FUNDED,
-  //           performedBy: user?.id,
-  //           description: "Payment initiated with gateway",
-  //         },
-  //       },
-  //     },
-  //     include: {
-  //       buyer: true,
-  //       seller: true,
-  //       payment: true,
-  //       logs: true,
-  //     },
-  //   });
-
-  //   // Update payment with gateway response and return transaction
-  //   await prisma.payment.update({
-  //     where: { id: payment.id },
-  //     data: {
-  //       gatewayResponse: { redirectUrl: paymentInitiation.redirectUrl },
-  //     },
-  //   });
-
-  //   return updatedTransaction;
-  // }
 
   @Mutation(() => Transaction)
   @UseMiddleware(isAuthenticated)
@@ -661,7 +440,7 @@ export class TransactionResolver {
 
       if (sellerWallet) {
         // Generate a unique reference for the transaction
-        const reference = `ESCROW-RELEASE-${transaction.transactionCode}`;
+        const reference = `ESC-${transaction.transactionCode}`;
         const amount = transaction.amount;
 
         // Update seller's wallet balance
