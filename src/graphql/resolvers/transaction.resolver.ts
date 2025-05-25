@@ -26,7 +26,6 @@ import {
   WalletTransactionType,
   WalletTransactionStatus,
   PaymentGateway,
-  PrismaClient,
 } from "../../generated/prisma-client";
 import { generateTransactionCode } from "../../utils/transaction";
 import { calculateEscrowFee } from "../../utils/fees";
@@ -39,8 +38,8 @@ import {
   sendNotification,
 } from "../../services/notification.service";
 import { TransactionAuditService } from "../../services/transaction-audit.service";
-import { PaymentService } from "../../services/payment.service";
 import logger from "../../utils/logger";
+import { PrismaClient } from "@prisma/client";
 
 const transactionAudit = new TransactionAuditService();
 

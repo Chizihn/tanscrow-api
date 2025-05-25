@@ -15,12 +15,12 @@ import {
 import {
   DisputeStatus,
   NotificationType,
-  PrismaClient,
   TransactionStatus,
 } from "../../generated/prisma-client";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { isAdmin, isAuthenticated } from "../middleware/auth.middleware";
+import { PrismaClient } from "@prisma/client";
 
 @Resolver(Dispute)
 export class DisputeResolver {

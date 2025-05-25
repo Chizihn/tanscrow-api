@@ -7,7 +7,6 @@ import {
   AuditAction,
   AuditCategory,
   WalletTransactionStatus,
-  PrismaClient,
 } from "../generated/prisma-client";
 import { prisma } from "../config/db.config";
 import axios from "axios";
@@ -19,6 +18,7 @@ import {
   TransferResponse,
 } from "../graphql/types/payment.type";
 import config from "../config/app.config";
+import { PrismaClient } from "@prisma/client";
 
 interface PaymentInitiationResponse {
   success: boolean;

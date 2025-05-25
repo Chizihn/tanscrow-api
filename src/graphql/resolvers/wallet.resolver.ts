@@ -20,13 +20,13 @@ import {
   WalletTransactionStatus,
   PaymentCurrency,
   PaymentStatus,
-  PrismaClient,
 } from "../../generated/prisma-client";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { isAuthenticated } from "../middleware/auth.middleware";
 import { PaymentService } from "../../services/payment.service";
 import logger from "../../utils/logger";
+import { PrismaClient } from "@prisma/client";
 
 @Resolver(Wallet)
 export class WalletResolver {

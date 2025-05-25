@@ -21,12 +21,12 @@ import {
   WalletTransactionType,
   WalletTransactionStatus,
   BankWithdrawalStatus,
-  PrismaClient,
 } from "../../generated/prisma-client";
 import { nanoid } from "nanoid";
 import { Decimal } from "../../generated/prisma-client/runtime/library";
 import { sendNotification } from "../../services/notification.service";
 import logger from "../../utils/logger";
+import { PrismaClient } from "@prisma/client";
 
 @Resolver(BankWithdrawal)
 export class WithdrawalResolver {
