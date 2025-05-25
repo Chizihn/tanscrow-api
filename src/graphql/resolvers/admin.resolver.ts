@@ -18,7 +18,7 @@ import {
 import { User } from "../types/user.type";
 import { Transaction } from "../types/transaction.type";
 import { PrismaClient } from "@prisma/client";
-import { Prisma } from "../../generated/prisma-client";
+import { Prisma } from "@prisma/client";
 
 @Resolver()
 export class AdminResolver {

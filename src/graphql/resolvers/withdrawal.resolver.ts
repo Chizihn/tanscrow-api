@@ -21,12 +21,14 @@ import {
   WalletTransactionType,
   WalletTransactionStatus,
   BankWithdrawalStatus,
-} from "../../generated/prisma-client";
+} from "@prisma/client";
 import { nanoid } from "nanoid";
-import { Decimal } from "../../generated/prisma-client/runtime/library";
+
 import { sendNotification } from "../../services/notification.service";
 import logger from "../../utils/logger";
 import { PrismaClient } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
+import { isVerified } from "../middleware/verification.middleware";
 
 @Resolver(BankWithdrawal)
 export class WithdrawalResolver {
@@ -49,6 +51,7 @@ export class WithdrawalResolver {
   }
 
   @Query(() => AccountDetails)
+  @UseMiddleware(isAuthenticated)
   async resolveAccountDetails(
     @Arg("input") input: AccountResolveInput
   ): Promise<AccountDetails> {
@@ -71,7 +74,7 @@ export class WithdrawalResolver {
   }
 
   @Mutation(() => BankWithdrawal)
-  @UseMiddleware(isAuthenticated)
+  @UseMiddleware(isAuthenticated, isVerified)
   async withdrawToNigerianBank(
     @Arg("input") input: WithdrawToNigerianBankInput,
     @Ctx() { user }: GraphQLContext
@@ -94,7 +97,7 @@ export class WithdrawalResolver {
     const reference = `WD-${nanoid(10)}`;
 
     // Create withdrawal record and update wallet in a transaction
-    const result = await prisma.$transaction(async (tx: PrismaClient) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Create bank withdrawal record
       const withdrawal = await tx.bankWithdrawal.create({
         data: {
@@ -151,7 +154,7 @@ export class WithdrawalResolver {
   }
 
   @Mutation(() => BankWithdrawal)
-  @UseMiddleware(isAuthenticated)
+  @UseMiddleware(isAuthenticated, isVerified)
   async confirmWithdrawal(
     @Arg("id", () => ID) id: string,
     @Ctx() { user }: GraphQLContext

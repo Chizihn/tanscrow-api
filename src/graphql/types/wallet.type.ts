@@ -10,9 +10,9 @@ import {
   WalletTransactionType,
   WalletTransactionStatus,
   PaymentCurrency,
-} from "../../generated/prisma-client";
+} from "@prisma/client";
 import { User } from "./user.type";
-import { Decimal } from "../../generated/prisma-client/runtime/library";
+import { Decimal } from "@prisma/client/runtime/library";
 
 // Register enums for GraphQL
 registerEnumType(WalletTransactionType, {

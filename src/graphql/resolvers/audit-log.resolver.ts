@@ -11,7 +11,7 @@ import {
   UseMiddleware,
 } from "type-graphql";
 import { AuditLog } from "../types/audit-log.type";
-import { AuditAction, AuditCategory } from "../../generated/prisma-client";
+import { AuditAction, AuditCategory } from "@prisma/client";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { isAdmin } from "../middleware/auth.middleware";

@@ -1,5 +1,5 @@
 import { Field, ObjectType, InputType, Float, Int } from "type-graphql";
-import { TransactionStatus, EscrowStatus } from "../../generated/prisma-client";
+import { TransactionStatus, EscrowStatus } from "@prisma/client";
 
 @ObjectType()
 export class TransactionReport {

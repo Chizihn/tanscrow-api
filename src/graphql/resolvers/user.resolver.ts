@@ -16,11 +16,7 @@ import {
   AddEmailInput,
   AddPhoneInput,
 } from "../types/profile.type";
-import {
-  Provider,
-  ProviderType,
-  TokenType,
-} from "../../generated/prisma-client";
+import { Provider, ProviderType, TokenType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { Dispute } from "../types/dispute.type";
 import { BadRequestException } from "../../utils/appError";

@@ -1,7 +1,6 @@
 import { Field, ObjectType, registerEnumType } from "type-graphql";
 import { GraphQLJSONObject } from "graphql-type-json";
-import { AuditAction, AuditCategory } from "../../generated/prisma-client";
-
+import { AuditAction, AuditCategory } from "@prisma/client";
 registerEnumType(AuditAction, {
   name: "AuditAction",
   description: "Types of audit actions that can be performed",

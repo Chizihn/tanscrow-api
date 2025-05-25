@@ -1,6 +1,6 @@
 import axios from "axios";
 import { prisma } from "../config/db.config";
-import { NotificationType } from "../generated/prisma-client";
+import { NotificationType } from "@prisma/client";
 import { transporter } from "../utils/email";
 
 // Twilio configuration

@@ -1,5 +1,5 @@
 import { Field, InputType, Float } from "type-graphql";
-import { PaymentCurrency, PaymentGateway } from "../../generated/prisma-client";
+import { PaymentCurrency, PaymentGateway } from "@prisma/client";
 
 @InputType()
 export class FundWalletInput {

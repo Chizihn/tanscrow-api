@@ -16,7 +16,7 @@ import {
   DisputeStatus,
   NotificationType,
   TransactionStatus,
-} from "../../generated/prisma-client";
+} from "@prisma/client";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { isAdmin, isAuthenticated } from "../middleware/auth.middleware";
@@ -104,7 +104,7 @@ export class DisputeResolver {
       throw new Error("Dispute already exists for this transaction");
     }
 
-    const dispute = await prisma.$transaction(async (tx: PrismaClient) => {
+    const dispute = await prisma.$transaction(async (tx) => {
       const createdDispute = await tx.dispute.create({
         data: {
           transactionId: input.transactionId,
@@ -216,48 +216,46 @@ export class DisputeResolver {
       throw new Error("Dispute is already closed");
     }
 
-    const updatedDispute = await prisma.$transaction(
-      async (tx: PrismaClient) => {
-        const resolved = await tx.dispute.update({
-          where: { id: input.disputeId },
-          data: {
-            status: input.resolution,
-            resolution: input.resolutionDetails,
-            resolvedAt: new Date(),
-            moderatorId: user?.id,
-          },
-          include: {
-            transaction: true,
-            initiator: true,
-            moderator: true,
-            evidence: true,
-          },
-        });
+    const updatedDispute = await prisma.$transaction(async (tx) => {
+      const resolved = await tx.dispute.update({
+        where: { id: input.disputeId },
+        data: {
+          status: input.resolution,
+          resolution: input.resolutionDetails,
+          resolvedAt: new Date(),
+          moderatorId: user?.id,
+        },
+        include: {
+          transaction: true,
+          initiator: true,
+          moderator: true,
+          evidence: true,
+        },
+      });
 
-        await tx.notification.createMany({
-          data: [
-            {
-              userId: dispute.transaction.buyerId,
-              title: "Dispute Resolution",
-              message: `The dispute for transaction ${dispute.transaction.transactionCode} has been resolved`,
-              type: NotificationType.DISPUTE,
-              relatedEntityId: dispute.id,
-              relatedEntityType: "Dispute",
-            },
-            {
-              userId: dispute.transaction.sellerId,
-              title: "Dispute Resolution",
-              message: `The dispute for transaction ${dispute.transaction.transactionCode} has been resolved`,
-              type: NotificationType.DISPUTE,
-              relatedEntityId: dispute.id,
-              relatedEntityType: "Dispute",
-            },
-          ],
-        });
+      await tx.notification.createMany({
+        data: [
+          {
+            userId: dispute.transaction.buyerId,
+            title: "Dispute Resolution",
+            message: `The dispute for transaction ${dispute.transaction.transactionCode} has been resolved`,
+            type: NotificationType.DISPUTE,
+            relatedEntityId: dispute.id,
+            relatedEntityType: "Dispute",
+          },
+          {
+            userId: dispute.transaction.sellerId,
+            title: "Dispute Resolution",
+            message: `The dispute for transaction ${dispute.transaction.transactionCode} has been resolved`,
+            type: NotificationType.DISPUTE,
+            relatedEntityId: dispute.id,
+            relatedEntityType: "Dispute",
+          },
+        ],
+      });
 
-        return resolved;
-      }
-    );
+      return resolved;
+    });
 
     return updatedDispute;
   }

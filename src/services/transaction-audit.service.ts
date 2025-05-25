@@ -5,8 +5,7 @@ import {
   TransactionStatus,
   EscrowStatus,
   AuditAction,
-  Transaction,
-} from "../generated/prisma-client";
+} from "@prisma/client";
 import { Request } from "express";
 
 export class TransactionAuditService {
@@ -250,7 +249,7 @@ export class TransactionAuditService {
     if (transactions.length === 0) return null;
 
     const total = transactions.reduce(
-      (sum: number, t: Transaction) => sum + t.amount.toNumber(),
+      (sum: number, t) => sum + t.amount.toNumber(),
       0
     );
     return total / transactions.length;

@@ -5,7 +5,7 @@ import {
   ProviderType,
   Provider as PrismaProvider,
   Address as PrismaAdress,
-} from "../../generated/prisma-client";
+} from "@prisma/client";
 
 // Register the AccountType enum for GraphQL
 registerEnumType(AccountType, {

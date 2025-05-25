@@ -6,11 +6,8 @@ import {
   ObjectType,
   registerEnumType,
 } from "type-graphql";
-import {
-  BankWithdrawalStatus,
-  PaymentCurrency,
-} from "../../generated/prisma-client";
-import { Decimal } from "../../generated/prisma-client/runtime/library";
+import { BankWithdrawalStatus, PaymentCurrency } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 
 registerEnumType(BankWithdrawalStatus, {
   name: "BankWithdrawalStatus",

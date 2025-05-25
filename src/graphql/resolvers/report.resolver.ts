@@ -7,11 +7,7 @@ import {
   ReportDateRangeInput,
 } from "../types/report.type";
 import { prisma } from "../../config/db.config";
-import {
-  TransactionStatus,
-  Transaction,
-  Dispute,
-} from "../../generated/prisma-client";
+import { TransactionStatus, Transaction, Dispute } from "@prisma/client";
 import { GraphQLContext } from "../types/context.type";
 import { isAdmin } from "../middleware/auth.middleware";
 
@@ -117,7 +113,7 @@ export class ReportResolver {
 
     const resolutionTimes: number[] = disputes
       .filter((d: { refundedAt: Date | null; createdAt: Date }) => d.refundedAt)
-      .map((d: Dispute) => d.resolvedAt!.getTime() - d.createdAt.getTime());
+      .map((d) => d.updatedAt!.getTime() - d.createdAt.getTime());
 
     const averageResolutionTime =
       resolutionTimes.length > 0
@@ -205,8 +201,7 @@ export class ReportResolver {
       0
     );
     const totalProcessingFees = transactions.reduce(
-      (sum: number, t: { payment?: { fee: number } }) =>
-        sum + (t.payment?.fee || 0),
+      (sum: number, t: Transaction) => sum + (Number(t?.escrowFee) || 0),
       0
     );
 

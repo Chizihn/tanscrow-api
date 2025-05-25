@@ -1,6 +1,6 @@
 import { Field, ObjectType, InputType, registerEnumType } from "type-graphql";
 import { User } from "./user.type";
-import { TokenType } from "../../generated/prisma-client";
+import { TokenType } from "@prisma/client";
 
 // Register the TokenType enum for GraphQL
 registerEnumType(TokenType, {

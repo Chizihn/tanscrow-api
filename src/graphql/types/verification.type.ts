@@ -1,8 +1,5 @@
 import { Field, ObjectType, InputType, registerEnumType } from "type-graphql";
-import {
-  DocumentType,
-  VerificationStatus,
-} from "../../generated/prisma-client";
+import { DocumentType, VerificationStatus } from "@prisma/client";
 
 registerEnumType(DocumentType, {
   name: "DocumentType",

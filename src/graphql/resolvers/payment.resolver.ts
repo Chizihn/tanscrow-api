@@ -8,7 +8,7 @@ import {
   ObjectType,
 } from "type-graphql";
 import { GraphQLContext } from "../types/context.type";
-import { PaymentGateway } from "../../generated/prisma-client";
+import { PaymentGateway } from "@prisma/client";
 import { PaymentService } from "../../services/payment.service";
 import { GraphQLJSONObject } from "graphql-type-json";
 import logger from "../../utils/logger";

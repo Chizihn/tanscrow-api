@@ -1,5 +1,5 @@
 import { ReviewResolver } from "../../../graphql/resolvers/review.resolver";
-import { PrismaClient } from "../../../generated/prisma-client";
+import { PrismaClient } from "@prisma/client";
 import { GraphQLContext } from "../../../graphql/types/context.type";
 
 // Create proper mock type for PrismaClient

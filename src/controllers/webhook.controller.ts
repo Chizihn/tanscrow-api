@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { PaymentGateway } from "../generated/prisma-client";
 import { PaymentService } from "../services/payment.service";
 import logger from "../utils/logger";
+import { PaymentGateway } from "@prisma/client";
 
 // Custom interface for request with rawBody
 interface WebhookRequest extends Request {

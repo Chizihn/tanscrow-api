@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import config from "../config/app.config";
-import { TokenType } from "../generated/prisma-client";
+import { TokenType } from "@prisma/client";
 import { prisma } from "../config/db.config";
 
 export class AuthService {

@@ -1,5 +1,6 @@
 // payment.service.ts
 import {
+  PrismaClient,
   PaymentGateway,
   PaymentStatus,
   TransactionStatus,
@@ -7,7 +8,7 @@ import {
   AuditAction,
   AuditCategory,
   WalletTransactionStatus,
-} from "../generated/prisma-client";
+} from "@prisma/client";
 import { prisma } from "../config/db.config";
 import axios from "axios";
 import crypto from "crypto";
@@ -18,7 +19,6 @@ import {
   TransferResponse,
 } from "../graphql/types/payment.type";
 import config from "../config/app.config";
-import { PrismaClient } from "@prisma/client";
 
 interface PaymentInitiationResponse {
   success: boolean;
@@ -404,7 +404,7 @@ export class PaymentService {
         throw new Error(`Transaction not found: ${transactionId}`);
       }
 
-      await prisma.$transaction(async (tx: PrismaClient) => {
+      await prisma.$transaction(async (tx) => {
         // Update payment status
         await tx.payment.update({
           where: { id: paymentId },
@@ -471,7 +471,7 @@ export class PaymentService {
         throw new Error(`Transaction not found: ${transactionId}`);
       }
 
-      await prisma.$transaction(async (tx: PrismaClient) => {
+      await prisma.$transaction(async (tx) => {
         // Update payment status
         await tx.payment.update({
           where: { id: paymentId },
@@ -547,7 +547,7 @@ export class PaymentService {
       const wallet = walletTransaction.wallet;
 
       // Update wallet balance and transaction status
-      await prisma.$transaction(async (tx: PrismaClient) => {
+      await prisma.$transaction(async (tx) => {
         // Update wallet balance
         const newBalance = wallet.balance.plus(walletTransaction.amount);
 
@@ -622,7 +622,7 @@ export class PaymentService {
       const wallet = walletTransaction.wallet;
 
       // Update transaction and payment status
-      await prisma.$transaction(async (tx: PrismaClient) => {
+      await prisma.$transaction(async (tx) => {
         // Mark wallet transaction as failed
         await tx.walletTransaction.update({
           where: { id: walletTransaction.id },

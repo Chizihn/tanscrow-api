@@ -16,11 +16,7 @@ import {
 import { GraphQLContext } from "../types/context.type";
 import { User } from "../types/user.type";
 import { prisma } from "../../config/db.config";
-import {
-  AccountType,
-  ProviderType,
-  TokenType,
-} from "../../generated/prisma-client";
+import { AccountType, ProviderType, TokenType } from "@prisma/client";
 import { AuthService } from "../../services/auth.service";
 import {
   sendEmail,

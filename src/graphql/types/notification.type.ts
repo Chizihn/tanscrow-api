@@ -8,8 +8,7 @@ import {
 import {
   NotificationType,
   NotificationType as PrismaNotificationType,
-} from "../../generated/prisma-client";
-
+} from "@prisma/client";
 registerEnumType(PrismaNotificationType, {
   name: "NotificationType",
   description: "Types of notifications in the system",

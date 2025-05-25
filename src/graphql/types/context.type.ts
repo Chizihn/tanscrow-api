@@ -1,5 +1,5 @@
 import { Request } from "express";
-import { User } from "../../../src/generated/prisma-client";
+import { User } from "@prisma/client";
 
 export interface GraphQLContext {
   req: Request;

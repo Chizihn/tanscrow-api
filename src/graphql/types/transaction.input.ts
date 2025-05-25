@@ -1,5 +1,5 @@
 import { Field, ID, InputType } from "type-graphql";
-import { DeliveryMethod } from "../../generated/prisma-client";
+import { DeliveryMethod } from "@prisma/client";
 
 @InputType()
 export class UpdateDeliveryInput {

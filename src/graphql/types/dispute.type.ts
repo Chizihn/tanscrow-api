@@ -8,7 +8,7 @@ import {
 // import { DisputeStatus } from "@prisma/client";
 import { User } from "./user.type";
 import { Transaction } from "./transaction.type";
-import { DisputeStatus } from "../../generated/prisma-client";
+import { DisputeStatus } from "@prisma/client";
 
 registerEnumType(DisputeStatus, {
   name: "DisputeStatus",
