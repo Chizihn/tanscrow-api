@@ -22,7 +22,10 @@ import {
   TokenType,
 } from "../../generated/prisma-client";
 import { AuthService } from "../../services/auth.service";
-import { sendEmail } from "../../utils/email";
+import {
+  sendEmail,
+  sendNotification,
+} from "../../services/notification.service";
 
 const authService = new AuthService();
 
@@ -64,17 +67,15 @@ export class AuthResolver {
     );
     console.log(`Verification token: ${token}`);
 
-    await sendEmail(
-      user?.email as string,
-      "Verify your email address",
-      `
-      Hello ${
+    await sendEmail({
+      to: user?.email as string,
+      subject: "Verify your email address",
+      body: `Hello ${
         user.firstName
       }, use this code ${token} tp verify your email address. Note, it expires in ${
         user.verificationTokens[-1]?.expiresAt
-      } hour(s)
-      `
-    );
+      } hour(s)`,
+    });
 
     return {
       token: authService.generateJwt(user.id),
@@ -259,6 +260,18 @@ export class AuthResolver {
     );
     await authService.markUserAsVerified(tokenRecord.userId);
     await authService.deleteToken(tokenRecord.id);
+
+    // Send verification success notification
+    await sendNotification({
+      userId: tokenRecord.userId,
+      title: "Email Verified",
+      message:
+        "Your email has been successfully verified. You can now access all features of your account.",
+      type: "VERIFICATION",
+      entityId: tokenRecord.userId,
+      entityType: "User",
+    });
+
     return true;
   }
 
@@ -277,7 +290,23 @@ export class AuthResolver {
       TokenType.EMAIL_VERIFICATION,
       24
     );
-    console.log(`Resent email verification token: ${token}`);
+
+    await sendEmail({
+      to: user?.email as string,
+      subject: "Verify your email address",
+      body: `Hello ${user.firstName}, use this code ${token} to verify your email address. Note, it expires in 24 hours.`,
+    });
+
+    await sendNotification({
+      userId: user.id,
+      title: "Verification Email Sent",
+      message:
+        "A new verification email has been sent to your email address. Please check your inbox.",
+      type: "VERIFICATION",
+      entityId: user.id,
+      entityType: "User",
+    });
+
     return true;
   }
 
@@ -295,7 +324,23 @@ export class AuthResolver {
       TokenType.PASSWORD_RESET,
       1
     );
-    console.log(`Password reset token: ${token}`);
+
+    await sendEmail({
+      to: user?.email as string,
+      subject: "Reset Your Password",
+      body: `Hello ${user.firstName}, use this code ${token} to reset your password. This code will expire in 1 hour.`,
+    });
+
+    await sendNotification({
+      userId: user.id,
+      title: "Password Reset Requested",
+      message:
+        "A password reset link has been sent to your email address. Please check your inbox.",
+      type: "SECURITY",
+      entityId: user.id,
+      entityType: "User",
+    });
+
     return true;
   }
 
@@ -316,6 +361,29 @@ export class AuthResolver {
     });
 
     await authService.deleteToken(tokenRecord.id);
+
+    const user = await prisma.user.findUnique({
+      where: { id: tokenRecord.userId },
+    });
+
+    if (user) {
+      await sendEmail({
+        to: user?.email as string,
+        subject: "Password Reset Successful",
+        body: `Hello ${user.firstName}, your password has been successfully reset. If you did not make this change, please contact support immediately.`,
+      });
+
+      await sendNotification({
+        userId: user.id,
+        title: "Password Reset Successful",
+        message:
+          "Your password has been successfully reset. If you did not make this change, please contact support immediately.",
+        type: "SECURITY",
+        entityId: user.id,
+        entityType: "User",
+      });
+    }
+
     return true;
   }
 
@@ -356,6 +424,15 @@ export class AuthResolver {
 
     await authService.markUserAsVerified(user.id);
     await authService.deleteToken(otpToken.id);
+
+    await sendNotification({
+      userId: user.id,
+      title: "Phone Number Verified",
+      message: "Your phone number has been successfully verified.",
+      type: "VERIFICATION",
+      entityId: user.id,
+      entityType: "User",
+    });
 
     return true;
   }

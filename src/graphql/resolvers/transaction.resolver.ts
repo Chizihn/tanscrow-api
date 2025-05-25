@@ -14,7 +14,6 @@ import {
 } from "../types/transaction.type";
 import {
   UpdateDeliveryInput,
-  ConfirmDeliveryInput,
   ReleaseEscrowInput,
   CancelTransactionInput,
   RequestRefundInput,
@@ -34,9 +33,13 @@ import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { Decimal } from "../../generated/prisma-client/runtime/library";
 import { isAuthenticated } from "../middleware/auth.middleware";
-import { sendNotification } from "../../services/notification.service";
+import {
+  sendEmail,
+  sendNotification,
+} from "../../services/notification.service";
 import { TransactionAuditService } from "../../services/transaction-audit.service";
 import { PaymentService } from "../../services/payment.service";
+import logger from "../../utils/logger";
 
 const transactionAudit = new TransactionAuditService();
 
@@ -86,6 +89,62 @@ export class TransactionResolver {
     return transaction;
   }
 
+  // @Mutation(() => Transaction)
+  // @UseMiddleware(isAuthenticated)
+  // async createTransaction(
+  //   @Arg("input") input: CreateTransactionInput,
+  //   @Ctx() { user }: GraphQLContext
+  // ): Promise<Transaction> {
+  //   if (input.buyerId === input.sellerId) {
+  //     throw new Error("You cannot create a transaction with yourself!");
+  //   }
+
+  //   //Calculate escrow fee
+  //   const escrowFee = calculateEscrowFee(input.amount);
+  //   // Convert escrowFee to Decimal and add to input.amount
+  //   const totalAmount = new Decimal(input.amount).add(escrowFee);
+
+  //   const transaction = prisma.transaction.create({
+  //     data: {
+  //       ...input,
+  //       transactionCode: generateTransactionCode(),
+  //       // buyerId: user?.id as string,
+  //       escrowFee,
+  //       totalAmount,
+  //       paymentCurrency: PaymentCurrency.NGN,
+  //       status: TransactionStatus.PENDING,
+  //       escrowStatus: EscrowStatus.NOT_FUNDED,
+  //       logs: {
+  //         create: {
+  //           action: "CREATE",
+  //           status: TransactionStatus.PENDING,
+  //           escrowStatus: EscrowStatus.NOT_FUNDED,
+  //           performedBy: input.buyerId as string,
+  //           description: "Transaction created",
+  //         },
+  //       },
+  //     },
+  //     include: {
+  //       buyer: true,
+  //       seller: true,
+  //       payment: true,
+  //       logs: true,
+  //     },
+  //   });
+
+  //   await sendNotification({
+  //     userId: input.sellerId,
+  //     entityType: "Transaction",
+  //     entityId: (await transaction).id,
+  //     type: "TRANSACTION",
+  //     title: "New Transaction Created",
+  //           message: `A new transaction (${(await transaction).transactionCode}) has been created. Please review the details.`,
+
+  //     })
+
+  //   return transaction;
+  // }
+
   @Mutation(() => Transaction)
   @UseMiddleware(isAuthenticated)
   async createTransaction(
@@ -96,16 +155,13 @@ export class TransactionResolver {
       throw new Error("You cannot create a transaction with yourself!");
     }
 
-    //Calculate escrow fee
     const escrowFee = calculateEscrowFee(input.amount);
-    // Convert escrowFee to Decimal and add to input.amount
     const totalAmount = new Decimal(input.amount).add(escrowFee);
 
-    return prisma.transaction.create({
+    const transaction = await prisma.transaction.create({
       data: {
         ...input,
         transactionCode: generateTransactionCode(),
-        // buyerId: user?.id as string,
         escrowFee,
         totalAmount,
         paymentCurrency: PaymentCurrency.NGN,
@@ -113,7 +169,7 @@ export class TransactionResolver {
         escrowStatus: EscrowStatus.NOT_FUNDED,
         logs: {
           create: {
-            action: "CREATE",
+            action: "CREATED",
             status: TransactionStatus.PENDING,
             escrowStatus: EscrowStatus.NOT_FUNDED,
             performedBy: input.buyerId as string,
@@ -128,220 +184,145 @@ export class TransactionResolver {
         logs: true,
       },
     });
+
+    const isBuyer = user?.id === input.buyerId;
+    const isSeller = user?.id === input.sellerId;
+
+    if (!isBuyer && !isSeller) {
+      throw new Error("Unauthorized: You are not part of this transaction.");
+    }
+
+    // Notify the counterparty
+    await sendNotification({
+      userId: isBuyer ? input.sellerId : input.buyerId,
+      entityType: "Transaction",
+      entityId: transaction.id,
+      type: "TRANSACTION",
+      title: "New Transaction Created",
+      message: `A new transaction (${
+        transaction.transactionCode
+      }) has been created by the ${
+        isBuyer ? "buyer" : "seller"
+      }. Please review the details.`,
+    });
+
+    // Notify the current user
+    await sendNotification({
+      userId: user?.id as string,
+      entityType: "Transaction",
+      entityId: transaction.id,
+      type: "TRANSACTION",
+      title: "Transaction Created",
+      message: `You have successfully created a new transaction (${transaction.transactionCode}).`,
+    });
+
+    return transaction;
   }
 
   @Mutation(() => Transaction)
   @UseMiddleware(isAuthenticated)
-  async processPayment(
-    @Arg("input") input: ProcessPaymentInput,
+  async payForTransaction(
+    @Arg("transactionId") transactionId: string,
     @Ctx() { user }: GraphQLContext
   ): Promise<Transaction> {
-    // Begin transaction to ensure all database operations are atomic
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: { buyer: true, seller: true },
+    });
+
+    if (!transaction) {
+      throw new Error("Transaction not found");
+    }
+
+    if (transaction.buyerId !== user?.id) {
+      throw new Error("Only the buyer can pay for this transaction");
+    }
+
+    if (transaction.status !== TransactionStatus.PENDING) {
+      throw new Error("Transaction is not in a payable state");
+    }
+
+    // Get buyer's wallet
+    const buyerWallet = await prisma.wallet.findUnique({
+      where: { userId: user?.id },
+    });
+
+    if (!buyerWallet) {
+      throw new Error("Buyer wallet not found");
+    }
+
+    const totalAmount = transaction.totalAmount;
+
+    logger.info("user wallet", buyerWallet);
+
+    // Check if buyer has sufficient funds
+    if (buyerWallet.balance.lessThan(totalAmount)) {
+      throw new Error("Insufficient wallet balance");
+    }
+
+    // Execute payment using wallet funds
     return prisma.$transaction(async (tx) => {
-      try {
-        // Log the beginning of transaction for debugging
-        console.log(
-          `Starting payment processing for transaction ${input.transactionId}`
-        );
+      // 1. Move funds from buyer's balance to escrow
+      const newBuyerBalance = buyerWallet.balance.minus(totalAmount);
+      const newBuyerEscrowBalance = buyerWallet.escrowBalance.plus(totalAmount);
 
-        const transaction = await tx.transaction.findUnique({
-          where: { id: input.transactionId },
-          include: { payment: true, logs: true },
-        });
+      await tx.wallet.update({
+        where: { id: buyerWallet.id },
+        data: {
+          balance: newBuyerBalance,
+          escrowBalance: newBuyerEscrowBalance,
+        },
+      });
 
-        if (!transaction) {
-          console.error(`Transaction not found: ${input.transactionId}`);
-          throw new Error("Transaction not found");
-        }
+      // 2. Create wallet transaction record
+      const walletTransactionRef = `TX-PAY-${transactionId}-${Date.now()}`;
 
-        if (transaction.buyerId !== user?.id) {
-          console.error(
-            `Auth error: User ${user?.id} is not the buyer ${transaction.buyerId}`
-          );
-          throw new Error("Only the buyer can process payment");
-        }
+      await tx.walletTransaction.create({
+        data: {
+          walletId: buyerWallet.id,
+          transactionId,
+          amount: totalAmount,
+          currency: buyerWallet.currency,
+          type: WalletTransactionType.ESCROW_FUNDING,
+          status: WalletTransactionStatus.COMPLETED,
+          description: `Payment for transaction ${transaction.transactionCode}`,
+          reference: walletTransactionRef,
+          balanceBefore: buyerWallet.balance,
+          balanceAfter: newBuyerBalance,
+        },
+      });
 
-        if (transaction.isPaid) {
-          console.error(`Transaction ${input.transactionId} is already paid`);
-          throw new Error("Transaction is already paid");
-        }
-
-        // Enforce wallet-only payments
-        if (input.paymentGateway !== PaymentGateway.WALLET) {
-          throw new Error("Only wallet payments are accepted for transactions");
-        }
-
-        console.log(`Transaction validation passed for ${input.transactionId}`);
-
-        // Generate a unique reference for the payment
-        const paymentReference = `PAY-${transaction.transactionCode}-${crypto
-          .randomUUID()
-          .substring(0, 8)}`;
-
-        console.log(`Generated payment reference: ${paymentReference}`);
-
-        // Check if there's already a payment in progress and clean it up
-        if (
-          transaction.payment &&
-          transaction.payment.status === PaymentStatus.PENDING
-        ) {
-          console.log(
-            `Cleaning up existing pending payment for transaction ${input.transactionId}`
-          );
-
-          // Clean up existing payment logs
-          if (transaction.logs && transaction.logs.length > 0) {
-            const paymentLogs = transaction.logs.filter(
-              (log) =>
-                (log.action === "PAYMENT_INITIATED" ||
-                  log.action === "PAYMENT") &&
-                log.status !== TransactionStatus.COMPLETED
-            );
-
-            for (const log of paymentLogs) {
-              console.log(`Deleting payment log: ${log.id}`);
-              await tx.transactionLog.delete({
-                where: { id: log.id },
-              });
-            }
-          }
-
-          // Delete the pending payment record
-          if (transaction.payment.id) {
-            console.log(`Deleting pending payment: ${transaction.payment.id}`);
-            await tx.payment.delete({
-              where: { id: transaction.payment.id },
-            });
-          }
-        }
-
-        console.log(
-          `Processing wallet payment for transaction ${input.transactionId}`
-        );
-
-        const wallet = await tx.wallet.findUnique({
-          where: { userId: user?.id },
-        });
-
-        if (!wallet) {
-          console.error(`Wallet not found for user ${user?.id}`);
-          throw new Error(
-            "You don't have a wallet. Visit the wallet page to create one."
-          );
-        }
-
-        // Convert to same type for comparison (using Decimal.js)
-        const walletBalance = new Decimal(wallet.balance.toString());
-        const transactionTotal = new Decimal(
-          transaction.totalAmount.toString()
-        );
-
-        if (walletBalance.lessThan(transactionTotal)) {
-          console.error(
-            `Insufficient balance: ${walletBalance} < ${transactionTotal}`
-          );
-          throw new Error("Insufficient wallet balance");
-        }
-
-        // Create payment record
-        console.log(
-          `Creating wallet payment record for transaction ${input.transactionId}`
-        );
-        const payment = await tx.payment.create({
-          data: {
-            amount: transaction.amount,
-            fee: transaction.escrowFee,
-            totalAmount: transaction.totalAmount,
-            paymentCurrency: transaction.paymentCurrency,
-            paymentGateway: PaymentGateway.WALLET,
-            gatewayReference: paymentReference,
-            status: PaymentStatus.SUCCESSFUL,
+      // 3. Update transaction status
+      const updatedTransaction = await tx.transaction.update({
+        where: { id: transactionId },
+        data: {
+          status: TransactionStatus.IN_PROGRESS,
+          escrowStatus: EscrowStatus.FUNDED,
+          isPaid: true,
+          logs: {
+            create: {
+              action: "PAYMENT_CONFIRMED",
+              status: TransactionStatus.IN_PROGRESS,
+              escrowStatus: EscrowStatus.FUNDED,
+              performedBy: user?.id!,
+              description: `Payment confirmed using wallet funds`,
+            },
           },
-        });
+        },
+        include: { buyer: true, seller: true, logs: true },
+      });
 
-        // Update wallet balance
-        const balanceBefore = wallet.balance;
-        const balanceAfter = wallet.balance.sub(transaction.totalAmount);
+      // 4. Send notification to seller
+      await sendNotification({
+        userId: transaction.sellerId,
+        title: "Payment Received",
+        message: `Payment for transaction ${transaction.transactionCode} has been confirmed`,
+        type: "PAYMENT",
+        entityId: transactionId,
+        entityType: "Transaction",
+      });
 
-        console.log(
-          `Updating wallet balance from ${balanceBefore} to ${balanceAfter}`
-        );
-
-        // Create wallet transaction
-        await tx.walletTransaction.create({
-          data: {
-            walletId: wallet.id,
-            amount: transaction.totalAmount,
-            currency: transaction.paymentCurrency,
-            type: WalletTransactionType.PAYMENT,
-            reference: paymentReference,
-            status: WalletTransactionStatus.COMPLETED,
-            description: `Payment for transaction ${transaction.transactionCode}`,
-            balanceBefore,
-            balanceAfter,
-          },
-        });
-
-        // Update wallet balance
-        await tx.wallet.update({
-          where: { id: wallet.id },
-          data: { balance: balanceAfter },
-        });
-
-        // First check if there's already a successful payment log to prevent duplicates
-        const existingSuccessLog = transaction.logs?.find(
-          (log) =>
-            log.action === "PAYMENT" &&
-            log.status === TransactionStatus.IN_PROGRESS &&
-            log.escrowStatus === EscrowStatus.FUNDED
-        );
-
-        // Create a new log only if one doesn't already exist
-        const logData = existingSuccessLog
-          ? {}
-          : {
-              logs: {
-                create: {
-                  action: "PAYMENT",
-                  status: TransactionStatus.IN_PROGRESS,
-                  escrowStatus: EscrowStatus.FUNDED,
-                  performedBy: user?.id,
-                  description: "Payment processed using wallet",
-                },
-              },
-            };
-
-        console.log(
-          `Finalizing wallet payment for transaction ${input.transactionId}`
-        );
-
-        return tx.transaction.update({
-          where: { id: input.transactionId },
-          data: {
-            paymentId: payment.id,
-            isPaid: true,
-            status: TransactionStatus.IN_PROGRESS,
-            escrowStatus: EscrowStatus.FUNDED,
-            ...logData,
-          },
-          include: {
-            buyer: true,
-            seller: true,
-            payment: true,
-            logs: true,
-          },
-        });
-      } catch (error) {
-        // Enhanced error logging
-        console.error("Payment processing error:", error);
-        console.error(
-          "Error details:",
-          error instanceof Error ? error.stack : "No stack trace"
-        );
-
-        // Re-throw the error to be handled by the caller
-        throw error;
-      }
+      return updatedTransaction;
     });
   }
 
@@ -362,7 +343,7 @@ export class TransactionResolver {
       throw new Error("Transaction must be in progress to update delivery");
     }
 
-    return prisma.transaction.update({
+    const updatedTransaction = await prisma.transaction.update({
       where: { id: input.transactionId },
       data: {
         deliveryMethod: input.deliveryMethod,
@@ -385,18 +366,58 @@ export class TransactionResolver {
         logs: true,
       },
     });
+
+    // Send notifications to buyer
+    await sendNotification({
+      userId: transaction.buyerId,
+      title: "Delivery Update",
+      message: `The seller has updated the delivery information for transaction ${
+        transaction.transactionCode
+      }. Expected delivery date: ${input.expectedDeliveryDate?.toLocaleDateString()}.`,
+      type: "TRANSACTION",
+      entityId: transaction.id,
+      entityType: "Transaction",
+    });
+
+    // Send email to buyer
+    const buyer = await prisma.user.findUnique({
+      where: { id: transaction.buyerId },
+    });
+
+    if (buyer?.email) {
+      await sendEmail({
+        to: buyer.email,
+        subject: `Delivery Update for Transaction ${transaction.transactionCode}`,
+        body: `
+          Hello ${buyer.firstName},
+
+          The seller has updated the delivery information for your transaction ${
+            transaction.transactionCode
+          }.
+
+          Delivery Method: ${input.deliveryMethod}
+          Tracking Information: ${input.trackingInfo || "Not provided"}
+          Expected Delivery Date: ${input.expectedDeliveryDate?.toLocaleDateString()}
+
+          You will be notified once the delivery is completed.
+        `,
+      });
+    }
+
+    return updatedTransaction;
   }
 
   @Mutation(() => Transaction)
   @UseMiddleware(isAuthenticated)
   async confirmDelivery(
-    @Arg("input") input: ConfirmDeliveryInput,
+    @Arg("transactionId") transactionId: string,
     @Ctx() { user }: GraphQLContext
   ): Promise<Transaction> {
     const transaction = await prisma.transaction.findUnique({
-      where: { id: input.transactionId },
+      where: { id: transactionId },
       include: {
         seller: true,
+        buyer: true, // Add buyer to include
       },
     });
 
@@ -407,119 +428,168 @@ export class TransactionResolver {
       throw new Error("Transaction must be in progress to confirm delivery");
     }
 
-    // Update transaction status to DELIVERED
-    const updatedTransaction = await prisma.transaction.update({
-      where: { id: input.transactionId },
-      data: {
-        status: TransactionStatus.DELIVERED,
-        actualDeliveryDate: new Date(),
-        logs: {
-          create: {
-            action: "DELIVERY_CONFIRMED",
+    let updatedTransaction;
+
+    // Update transaction status to DELIVERED and handle escrow release in a single transaction
+    try {
+      updatedTransaction = await prisma.$transaction(async (tx) => {
+        // First update the transaction status
+        const updated = await tx.transaction.update({
+          where: { id: transactionId },
+          data: {
             status: TransactionStatus.DELIVERED,
-            escrowStatus: transaction.escrowStatus,
-            performedBy: user?.id,
-            description: "Delivery confirmed by buyer",
+            actualDeliveryDate: new Date(),
+            logs: {
+              create: {
+                action: "DELIVERY_CONFIRMED",
+                status: TransactionStatus.DELIVERED,
+                escrowStatus: transaction.escrowStatus,
+                performedBy: user?.id as string,
+                description: "Delivery confirmed by buyer",
+              },
+            },
           },
-        },
-      },
-      include: {
-        buyer: true,
-        seller: true,
-        payment: true,
-        logs: true,
-      },
-    });
+          include: {
+            buyer: true,
+            seller: true,
+            payment: true,
+            logs: true,
+          },
+        });
+        return updated;
+      });
+    } catch (error) {
+      logger.error("Error updating transaction status:", error);
+      throw new Error("Failed to confirm delivery");
+    }
 
     // Automatically release funds to seller's wallet
     try {
-      // Find seller's wallet
-      const sellerWallet = await prisma.wallet.findUnique({
-        where: { userId: transaction.sellerId },
-      });
+      // Find both buyer's and seller's wallets
+      const [sellerWallet, buyerWallet] = await Promise.all([
+        prisma.wallet.findUnique({
+          where: { userId: transaction.sellerId },
+        }),
+        prisma.wallet.findUnique({
+          where: { userId: transaction.buyerId },
+        }),
+      ]);
 
-      if (sellerWallet) {
-        // Generate a unique reference for the transaction
-        const reference = `ESC-${transaction.transactionCode}`;
-        const amount = transaction.amount;
+      if (!sellerWallet) {
+        throw new Error("Seller wallet not found");
+      }
 
-        // Update seller's wallet balance
-        const balanceBefore = sellerWallet.balance;
-        const balanceAfter = sellerWallet.balance.add(amount);
+      if (!buyerWallet) {
+        throw new Error("Buyer wallet not found");
+      }
 
-        await prisma.$transaction(async (tx) => {
-          // Create wallet transaction
-          await tx.walletTransaction.create({
-            data: {
-              walletId: sellerWallet.id,
-              amount: amount,
-              currency: transaction.paymentCurrency,
-              description: `Payment received for transaction ${transaction.transactionCode}`,
-              type: WalletTransactionType.ESCROW_RELEASE,
-              reference,
-              balanceBefore,
-              balanceAfter,
-              status: WalletTransactionStatus.COMPLETED,
-            },
-          });
+      // Generate a unique reference for the transaction
+      const reference = `ESC-${transaction.transactionCode}`;
+      const amount = transaction.amount;
+      const totalAmount = transaction.totalAmount; // This includes escrow fee
 
-          // Update wallet balance
-          await tx.wallet.update({
-            where: { id: sellerWallet.id },
-            data: {
-              balance: balanceAfter,
-            },
-          });
+      await prisma.$transaction(async (tx) => {
+        // 1. Update buyer's escrow balance (reduce it)
+        const newBuyerEscrowBalance =
+          buyerWallet.escrowBalance.minus(totalAmount);
 
-          // Update transaction escrow status
-          await tx.transaction.update({
-            where: { id: transaction.id },
-            data: {
-              status: TransactionStatus.COMPLETED,
-              escrowStatus: EscrowStatus.RELEASED,
-              completedAt: new Date(),
-              logs: {
-                create: {
-                  action: "ESCROW_RELEASED_AUTO",
-                  status: TransactionStatus.COMPLETED,
-                  escrowStatus: EscrowStatus.RELEASED,
-                  performedBy: user?.id as string,
-                  description:
-                    "Escrow automatically released to seller upon delivery confirmation",
-                },
+        await tx.wallet.update({
+          where: { id: buyerWallet.id },
+          data: {
+            escrowBalance: newBuyerEscrowBalance,
+          },
+        });
+
+        // 2. Create wallet transaction for buyer (escrow reduction)
+        await tx.walletTransaction.create({
+          data: {
+            walletId: buyerWallet.id,
+            transactionId: transaction.id,
+            amount: totalAmount.negated(), // Negative amount to show reduction
+            currency: transaction.paymentCurrency,
+            description: `Escrow released for transaction ${transaction.transactionCode}`,
+            type: WalletTransactionType.ESCROW_RELEASE,
+            reference: `${reference}-BUYER`,
+            balanceBefore: buyerWallet.escrowBalance,
+            balanceAfter: newBuyerEscrowBalance,
+            status: WalletTransactionStatus.COMPLETED,
+          },
+        });
+
+        // 3. Update seller's wallet balance (add the main amount, not including escrow fee)
+        const sellerBalanceBefore = sellerWallet.balance;
+        const sellerBalanceAfter = sellerWallet.balance.add(amount);
+
+        await tx.wallet.update({
+          where: { id: sellerWallet.id },
+          data: {
+            balance: sellerBalanceAfter,
+          },
+        });
+
+        // 4. Create wallet transaction for seller (payment received)
+        await tx.walletTransaction.create({
+          data: {
+            walletId: sellerWallet.id,
+            transactionId: transaction.id,
+            amount: amount,
+            currency: transaction.paymentCurrency,
+            description: `Payment received for transaction ${transaction.transactionCode}`,
+            type: WalletTransactionType.ESCROW_RELEASE,
+            reference: `${reference}-SELLER`,
+            balanceBefore: sellerBalanceBefore,
+            balanceAfter: sellerBalanceAfter,
+            status: WalletTransactionStatus.COMPLETED,
+          },
+        });
+
+        // 5. Update transaction escrow status
+        await tx.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: TransactionStatus.COMPLETED,
+            escrowStatus: EscrowStatus.RELEASED,
+            completedAt: new Date(),
+            logs: {
+              create: {
+                action: "ESCROW_RELEASED_AUTO",
+                status: TransactionStatus.COMPLETED,
+                escrowStatus: EscrowStatus.RELEASED,
+                performedBy: user?.id as string,
+                description:
+                  "Escrow automatically released to seller upon delivery confirmation",
               },
             },
-          });
+          },
         });
+      });
 
-        // Send notifications to both buyer and seller
-        const sellerName = transaction.seller?.firstName || "Seller";
-        // const buyerName = transaction.buyer?.firstName || "Buyer";
+      // Send notifications to both buyer and seller
+      const sellerName = transaction.seller?.firstName || "Seller";
 
-        // Seller notification
-        const sellerNotificationMessage = `Payment of ${amount} ${transaction.paymentCurrency} has been released to your wallet for transaction ${transaction.transactionCode}.`;
-        await sendNotification({
-          userId: transaction.sellerId,
-          title: "Payment Released",
-          message: sellerNotificationMessage,
-          type: "TRANSACTION",
-          entityId: transaction.id,
-          entityType: "Transaction",
-          forceAll: true, // Ensure critical transaction notifications are sent
-        });
+      // Seller notification
+      const sellerNotificationMessage = `Payment of ${amount} ${transaction.paymentCurrency} has been released to your wallet for transaction ${transaction.transactionCode}.`;
+      await sendNotification({
+        userId: transaction.sellerId,
+        title: "Payment Released",
+        message: sellerNotificationMessage,
+        type: "TRANSACTION",
+        entityId: transaction.id,
+        entityType: "Transaction",
+        forceAll: true,
+      });
 
-        // Buyer notification
-        const buyerNotificationMessage = `Your payment has been released to ${sellerName} for transaction ${transaction.transactionCode}. Thank you for using our service!`;
-        await sendNotification({
-          userId: transaction.buyerId,
-          title: "Transaction Completed",
-          message: buyerNotificationMessage,
-          type: "TRANSACTION",
-          entityId: transaction.id,
-          entityType: "Transaction",
-          forceAll: true, // Ensure critical transaction notifications are sent
-        });
-      }
+      // Buyer notification
+      const buyerNotificationMessage = `Your payment has been released to ${sellerName} for transaction ${transaction.transactionCode}. Thank you for using our service!`;
+      await sendNotification({
+        userId: transaction.buyerId,
+        title: "Transaction Completed",
+        message: buyerNotificationMessage,
+        type: "TRANSACTION",
+        entityId: transaction.id,
+        entityType: "Transaction",
+        forceAll: true,
+      });
     } catch (error) {
       console.error("Error releasing escrow funds:", error);
       // We don't throw here to ensure the delivery confirmation still succeeds
@@ -528,7 +598,6 @@ export class TransactionResolver {
 
     return updatedTransaction;
   }
-
   @Mutation(() => Transaction)
   @UseMiddleware(isAuthenticated)
   async releaseEscrow(
@@ -547,7 +616,7 @@ export class TransactionResolver {
     if (transaction.escrowStatus !== EscrowStatus.FUNDED)
       throw new Error("Escrow must be funded to release");
 
-    return prisma.transaction.update({
+    const updatedTransaction = await prisma.transaction.update({
       where: { id: input.transactionId },
       data: {
         status: TransactionStatus.COMPLETED,
@@ -570,6 +639,39 @@ export class TransactionResolver {
         logs: true,
       },
     });
+
+    // Send notifications to seller
+    await sendNotification({
+      userId: transaction.sellerId,
+      title: "Escrow Released",
+      message: `The buyer has released the escrow payment for transaction ${transaction.transactionCode}. The funds will be transferred to your wallet.`,
+      type: "TRANSACTION",
+      entityId: transaction.id,
+      entityType: "Transaction",
+      forceAll: true,
+    });
+
+    // Send email to seller
+    const seller = await prisma.user.findUnique({
+      where: { id: transaction.sellerId },
+    });
+
+    if (seller?.email) {
+      await sendEmail({
+        to: seller.email,
+        subject: `Escrow Released for Transaction ${transaction.transactionCode}`,
+        body: `
+          Hello ${seller.firstName},
+
+          Great news! The buyer has released the escrow payment for transaction ${transaction.transactionCode}.
+          The funds (${transaction.amount} ${transaction.paymentCurrency}) will be transferred to your wallet.
+
+          Thank you for using our service!
+        `,
+      });
+    }
+
+    return updatedTransaction;
   }
 
   @Mutation(() => Transaction)

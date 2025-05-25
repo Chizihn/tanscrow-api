@@ -14,6 +14,7 @@ import {
   SubmitVerificationDocumentInput,
   ReviewVerificationDocumentInput,
 } from "../types/verification.type";
+import { sendNotification } from "../../services/notification.service";
 
 @Resolver(() => VerificationDocument)
 export class VerificationResolver {
@@ -80,6 +81,27 @@ export class VerificationResolver {
       await prisma.user.update({
         where: { id: document.userId },
         data: { verified: true },
+      });
+
+      // Send approval notification
+      await sendNotification({
+        userId: document.userId,
+        title: "Verification Approved",
+        message:
+          "Your verification documents have been approved. Your account is now verified.",
+        type: "VERIFICATION",
+        entityId: documentId,
+        entityType: "VerificationDocument",
+      });
+    } else if (status === "REJECTED") {
+      // Send rejection notification
+      await sendNotification({
+        userId: document.userId,
+        title: "Verification Rejected",
+        message: `Your verification documents were rejected. Reason: ${rejectionReason}`,
+        type: "VERIFICATION",
+        entityId: documentId,
+        entityType: "VerificationDocument",
       });
     }
 

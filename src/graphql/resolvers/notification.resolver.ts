@@ -45,11 +45,11 @@ export class NotificationResolver {
   @Mutation(() => Notification)
   @UseMiddleware(isAuthenticated)
   async markNotificationRead(
-    @Arg("input") input: MarkNotificationReadInput,
+    @Arg("notificationId") notificationId: string,
     @Ctx() { user }: GraphQLContext
   ): Promise<Notification> {
     const notification = await prisma.notification.findUnique({
-      where: { id: input.notificationId },
+      where: { id: notificationId },
     });
 
     if (!notification) {
@@ -61,7 +61,7 @@ export class NotificationResolver {
     }
 
     return prisma.notification.update({
-      where: { id: input.notificationId },
+      where: { id: notificationId },
       data: { isRead: true },
     });
   }

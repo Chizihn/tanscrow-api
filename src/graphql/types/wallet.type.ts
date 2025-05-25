@@ -111,8 +111,27 @@ export class CreateWalletInput {
   currency?: PaymentCurrency;
 }
 
+// You'll also need this response type
+@ObjectType()
+export class PaymentInitiationResponse {
+  @Field()
+  success!: boolean;
+
+  @Field({ nullable: true })
+  redirectUrl?: string;
+
+  @Field({ nullable: true })
+  reference?: string;
+
+  @Field({ nullable: true })
+  error?: string;
+}
+
 @InputType()
-export class WalletTransactionInput {
+export class WalletTransferInput {
+  @Field(() => ID)
+  transactionId!: string;
+
   @Field(() => Float)
   amount!: Decimal;
 

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { prisma } from "../config/db.config";
 import { NotificationType } from "../generated/prisma-client";
+import { transporter } from "../utils/email";
 
 // Twilio configuration
 const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -158,41 +159,28 @@ export async function sendEmail({
   subject: string;
   body: string;
   html?: string;
-}) {
+}): Promise<void> {
   try {
-    if (!emailApiKey) {
-      console.warn("Email API key not configured. Email not sent.");
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.warn("Email credentials are not configured. Email not sent.");
       return;
     }
 
-    // This is a placeholder for your actual email service implementation
-    // You can replace this with SendGrid, Mailgun, or any other email service
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      to,
+      subject,
+      text: body,
+      html: html || body,
+    };
 
-    // Example using a generic email API
-    const response = await axios.post(
-      "https://api.youremailservice.com/v1/send",
-      {
-        from: emailSender,
-        to,
-        subject,
-        text: body,
-        html: html || body,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${emailApiKey}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    return response.data;
+    await transporter.sendMail(mailOptions);
+    console.log(`Email sent to ${to}`);
   } catch (error) {
     console.error("Error sending email:", error);
-    // Don't throw error to prevent notification process from failing
+    // Do not throw to avoid crashing the calling process
   }
 }
-
 /**
  * Format phone number to international format
  */

@@ -3,6 +3,17 @@
 # !!!   DO NOT MODIFY THIS FILE BY YOURSELF   !!!
 # -----------------------------------------------
 
+type AccountDetails {
+  accountName: String!
+  accountNumber: String!
+  bankCode: String!
+}
+
+input AccountResolveInput {
+  accountNumber: String!
+  bankCode: String!
+}
+
 """The type of user account"""
 enum AccountType {
   ADMIN
@@ -42,6 +53,12 @@ type AuthResponse {
   user: User!
 }
 
+type Bank {
+  active: Boolean!
+  code: String!
+  name: String!
+}
+
 type BankWithdrawal {
   accountName: String!
   accountNumber: String!
@@ -74,10 +91,6 @@ input CancelTransactionInput {
 input ChangePasswordInput {
   currentPassword: String!
   newPassword: String!
-}
-
-input ConfirmDeliveryInput {
-  transactionId: ID!
 }
 
 input CreateReviewInput {
@@ -186,10 +199,6 @@ The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](
 """
 scalar JSONObject
 
-input MarkNotificationReadInput {
-  notificationId: ID!
-}
-
 type Mutation {
   addDisputeEvidence(input: AddDisputeEvidenceInput!): Dispute!
   addEmailToAccount(email: String!): User!
@@ -204,17 +213,17 @@ type Mutation {
 
   """User changing password"""
   changePassword(input: ChangePasswordInput!): User!
-  confirmDelivery(input: ConfirmDeliveryInput!): Transaction!
+  confirmDelivery(transactionId: String!): Transaction!
+  confirmWithdrawal(id: ID!): BankWithdrawal!
   createReview(input: CreateReviewInput!): Review!
   createTransaction(input: CreateTransactionInput!): Transaction!
   createWallet(input: CreateWalletInput!): Wallet!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
-  fundWallet(input: FundWalletInput!): WalletTransaction!
+  fundWallet(input: FundWalletInput!): PaymentInitiationResponse!
   markAllNotificationsRead: Boolean!
-  markNotificationRead(input: MarkNotificationReadInput!): Notification!
+  markNotificationRead(notificationId: String!): Notification!
   openDispute(input: OpenDisputeInput!): Dispute!
-  processPayment(input: ProcessPaymentInput!): Transaction!
-  processWalletTransaction(input: WalletTransactionInput!): WalletTransaction!
+  payForTransaction(transactionId: String!): Transaction!
   releaseEscrow(input: ReleaseEscrowInput!): Transaction!
   requestPhoneOtp(input: RequestPhoneOtpInput!): Boolean!
   requestRefund(input: RequestRefundInput!): Transaction!
@@ -231,6 +240,7 @@ type Mutation {
 
   """Submit a new verification document for review"""
   submitVerificationDocument(input: SubmitVerificationDocumentInput!): VerificationDocument!
+  transferWalletFunds(input: WalletTransferInput!): WalletTransaction!
   updateDelivery(input: UpdateDeliveryInput!): Transaction!
 
   """User updating their profile"""
@@ -260,9 +270,12 @@ type Notification {
 enum NotificationType {
   DISPUTE
   PAYMENT
+  REVIEW
+  SECURITY
   SYSTEM
   TRANSACTION
   VERIFICATION
+  WITHDRAWAL
 }
 
 input OpenDisputeInput {
@@ -297,6 +310,13 @@ enum PaymentGateway {
   WALLET
 }
 
+type PaymentInitiationResponse {
+  error: String
+  redirectUrl: String
+  reference: String
+  success: Boolean!
+}
+
 """The status of the payment"""
 enum PaymentStatus {
   FAILED
@@ -304,11 +324,6 @@ enum PaymentStatus {
   PENDING
   REFUNDED
   SUCCESSFUL
-}
-
-input ProcessPaymentInput {
-  paymentGateway: PaymentGateway!
-  transactionId: ID!
 }
 
 type Provider {
@@ -333,6 +348,7 @@ enum ProviderType {
 type Query {
   dispute(id: String!): Dispute!
   disputes: [Dispute!]!
+  getNigerianBanks: [Bank!]!
   getPaymentDetails(reference: String!): JSONObject
   getSellerReviews(sellerId: String!): [Review!]!
 
@@ -345,6 +361,7 @@ type Query {
 
   """Retrieve pending verification documents for admin review"""
   pendingVerificationDocuments: [VerificationDocument!]!
+  resolveAccountDetails(input: AccountResolveInput!): AccountDetails!
 
   """Find user by email adress or phone number"""
   searchUser(input: String!): User
@@ -598,13 +615,6 @@ type WalletTransaction {
   walletId: ID!
 }
 
-input WalletTransactionInput {
-  amount: Float!
-  currency: PaymentCurrency!
-  description: String
-  type: WalletTransactionType!
-}
-
 """The status of wallet transaction"""
 enum WalletTransactionStatus {
   COMPLETED
@@ -623,6 +633,14 @@ enum WalletTransactionType {
   FEE_PAYMENT
   PAYMENT
   WITHDRAWAL
+}
+
+input WalletTransferInput {
+  amount: Float!
+  currency: PaymentCurrency!
+  description: String
+  transactionId: ID!
+  type: WalletTransactionType!
 }
 
 input WithdrawToNigerianBankInput {

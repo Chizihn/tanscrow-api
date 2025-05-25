@@ -1,3 +1,4 @@
+// payment.service.ts
 import {
   PaymentGateway,
   PaymentStatus,
@@ -5,12 +6,17 @@ import {
   EscrowStatus,
   AuditAction,
   AuditCategory,
+  WalletTransactionStatus,
 } from "../generated/prisma-client";
 import { prisma } from "../config/db.config";
 import axios from "axios";
 import crypto from "crypto";
 import { sendNotification } from "./notification.service";
 import logger from "../utils/logger";
+import {
+  TransferRecipient,
+  TransferResponse,
+} from "../graphql/types/payment.type";
 
 interface PaymentInitiationResponse {
   success: boolean;
@@ -28,6 +34,9 @@ export class PaymentService {
   private readonly flutterwaveBaseUrl: string =
     "https://api.flutterwave.com/v3";
 
+  private readonly paystackTransferEndpoint = "/transfer";
+  private readonly paystackRecipientEndpoint = "/transferrecipient";
+
   private constructor() {
     this.paystackSecretKey = process.env.PAYSTACK_SECRET_KEY || "";
     this.flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY || "";
@@ -40,6 +49,97 @@ export class PaymentService {
       !this.flutterwaveSecretHash
     ) {
       logger.warn("Missing payment gateway configuration");
+    }
+  }
+
+  /**
+   * Initiate a transfer to a bank account
+   */
+  async initiateTransfer({
+    amount,
+    recipient,
+    reference,
+  }: {
+    amount: number;
+    recipient: TransferRecipient;
+    reference: string;
+  }): Promise<TransferResponse> {
+    try {
+      logger.info(
+        `Initiating transfer of ${amount} to ${recipient.accountNumber}`
+      );
+
+      // First create a transfer recipient
+      const recipientResponse = await axios.post(
+        `${this.paystackBaseUrl}${this.paystackRecipientEndpoint}`,
+        {
+          type: "nuban",
+          name: recipient.accountName,
+          account_number: recipient.accountNumber,
+          bank_code: recipient.bankCode,
+          currency: "NGN",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.paystackSecretKey}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!recipientResponse.data.status) {
+        logger.error(
+          "Failed to create transfer recipient:",
+          recipientResponse.data
+        );
+        return {
+          success: false,
+          error: "Failed to create transfer recipient",
+        };
+      }
+
+      const recipientCode = recipientResponse.data.data.recipient_code;
+
+      // Initiate the transfer
+      const transferResponse = await axios.post(
+        `${this.paystackBaseUrl}${this.paystackTransferEndpoint}`,
+        {
+          source: "balance",
+          amount: amount * 100, // Convert to kobo
+          recipient: recipientCode,
+          reason: `Withdrawal - ${reference}`,
+          reference,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.paystackSecretKey}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!transferResponse.data.status) {
+        logger.error("Failed to initiate transfer:", transferResponse.data);
+        return {
+          success: false,
+          error: transferResponse.data.message || "Failed to initiate transfer",
+        };
+      }
+
+      return {
+        success: true,
+        transferCode: transferResponse.data.data.transfer_code,
+        reference: transferResponse.data.data.reference,
+      };
+    } catch (error) {
+      logger.error("Transfer initiation error:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to initiate transfer",
+      };
     }
   }
 
@@ -58,7 +158,7 @@ export class PaymentService {
     totalAmount,
     email,
     gateway,
-    existingReference = null, // Allow using a pre-generated reference
+    existingReference = null,
   }: {
     transactionId: string;
     totalAmount: number;
@@ -76,8 +176,7 @@ export class PaymentService {
         existingReference || this.generatePaymentReference(transactionId);
       console.log(`Using payment reference: ${reference}`);
 
-      // Initialize payment with gateway - no need to create payment record here
-      // as it's already created in the processPayment method
+      // Initialize payment with gateway
       let response: PaymentInitiationResponse;
 
       switch (gateway) {
@@ -163,30 +262,24 @@ export class PaymentService {
       let event: string, reference: string, status: string, amount: number;
 
       if (gateway === PaymentGateway.PAYSTACK) {
-        // Paystack payload format: https://paystack.com/docs/payments/webhooks/
         event = payload.event;
         reference = payload.data?.reference;
         status = payload.data?.status;
         amount = (payload.data?.amount || 0) / 100; // Convert from kobo to naira
       } else if (gateway === PaymentGateway.FLUTTERWAVE) {
-        // Flutterwave payload format: https://developer.flutterwave.com/docs/webhooks
         const flutterData = payload.data;
 
-        // Log the webhook payload for debugging
         logger.info(
           "Flutterwave webhook payload:",
           JSON.stringify(flutterData, null, 2)
         );
 
-        // Map Flutterwave events to our standard format
         event =
           flutterData?.status === "successful"
             ? "charge.completed"
             : "charge.failed";
         reference = flutterData?.tx_ref;
-        status = flutterData?.status; // 'successful', 'failed', etc.
-
-        // Use charged_amount for exact verification
+        status = flutterData?.status;
         amount = Number(
           flutterData?.charged_amount || flutterData?.amount || 0
         );
@@ -202,13 +295,16 @@ export class PaymentService {
         return false;
       }
 
-      // 3. Fetch the payment from database
+      // 3. Fetch the payment from database with all related data
       const payment = await prisma.payment.findFirst({
         where: { gatewayReference: reference },
-        include: { transactions: { take: 1 } },
+        include: {
+          transactions: { take: 1 },
+          walletTransactions: { take: 1 },
+        },
       });
 
-      if (!payment || payment.transactions.length === 0) {
+      if (!payment) {
         await this.logSecurityEvent(
           `Payment not found for reference: ${reference}`
         );
@@ -224,34 +320,54 @@ export class PaymentService {
         return false;
       }
 
-      // 5. Process based on payment status
+      // 5. Check if payment is already processed
       if (payment.status === PaymentStatus.SUCCESSFUL) {
         logger.info(`Payment ${reference} already processed`);
         return true;
       }
 
-      const transaction = payment.transactions[0];
+      // 6. Determine payment type and handle accordingly
+      const isWalletFunding = payment.walletTransactions.length > 0;
+      const isTransactionPayment = payment.transactions.length > 0;
 
-      // 6. Handle event based on success/failure
+      // 7. Handle event based on success/failure
       if (
         event === "charge.success" ||
         event === "charge.completed" ||
         status === "successful" ||
         status === "success"
       ) {
-        await this.handleSuccessfulPayment(
-          payment.id,
-          transaction.id,
-          gateway,
-          payload
-        );
+        if (isWalletFunding) {
+          await this.handleSuccessfulWalletFunding(
+            payment.id,
+            gateway,
+            payload
+          );
+        } else if (isTransactionPayment) {
+          const transaction = payment.transactions[0];
+          await this.handleSuccessfulTransactionPayment(
+            payment.id,
+            transaction.id,
+            gateway,
+            payload
+          );
+        } else {
+          logger.warn(
+            `Payment ${reference} has no associated transaction or wallet funding`
+          );
+        }
       } else if (event === "charge.failed" || status === "failed") {
-        await this.handleFailedPayment(
-          payment.id,
-          transaction.id,
-          gateway,
-          payload
-        );
+        if (isWalletFunding) {
+          await this.handleFailedWalletFunding(payment.id, gateway, payload);
+        } else if (isTransactionPayment) {
+          const transaction = payment.transactions[0];
+          await this.handleFailedTransactionPayment(
+            payment.id,
+            transaction.id,
+            gateway,
+            payload
+          );
+        }
       } else {
         logger.info(`Ignored webhook event: ${event}`);
       }
@@ -269,9 +385,9 @@ export class PaymentService {
   }
 
   /**
-   * Handle successful payment by updating database and sending notifications
+   * Handle successful transaction payment (existing logic)
    */
-  private async handleSuccessfulPayment(
+  private async handleSuccessfulTransactionPayment(
     paymentId: string,
     transactionId: string,
     gateway: PaymentGateway,
@@ -327,18 +443,18 @@ export class PaymentService {
       });
 
       logger.info(
-        `Successfully processed payment for transaction ${transactionId}`
+        `Successfully processed transaction payment for transaction ${transactionId}`
       );
     } catch (error) {
-      logger.error(`Error processing successful payment:`, error);
+      logger.error(`Error processing successful transaction payment:`, error);
       throw error;
     }
   }
 
   /**
-   * Handle failed payment by updating database and sending notifications
+   * Handle failed transaction payment (existing logic)
    */
-  private async handleFailedPayment(
+  private async handleFailedTransactionPayment(
     paymentId: string,
     transactionId: string,
     gateway: PaymentGateway,
@@ -392,9 +508,150 @@ export class PaymentService {
         });
       });
 
-      logger.info(`Recorded failed payment for transaction ${transactionId}`);
+      logger.info(
+        `Recorded failed transaction payment for transaction ${transactionId}`
+      );
     } catch (error) {
-      logger.error(`Error processing failed payment:`, error);
+      logger.error(`Error processing failed transaction payment:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle successful wallet funding (NEW)
+   */
+  private async handleSuccessfulWalletFunding(
+    paymentId: string,
+    gateway: PaymentGateway,
+    gatewayResponse: any
+  ): Promise<void> {
+    try {
+      // Find the payment and associated wallet transaction
+      const payment = await prisma.payment.findUnique({
+        where: { id: paymentId },
+        include: {
+          walletTransactions: {
+            where: { status: WalletTransactionStatus.PENDING },
+            include: { wallet: { include: { user: true } } },
+          },
+        },
+      });
+
+      if (!payment || payment.walletTransactions.length === 0) {
+        throw new Error("Payment or wallet transaction not found");
+      }
+
+      const walletTransaction = payment.walletTransactions[0];
+      const wallet = walletTransaction.wallet;
+
+      // Update wallet balance and transaction status
+      await prisma.$transaction(async (tx) => {
+        // Update wallet balance
+        const newBalance = wallet.balance.plus(walletTransaction.amount);
+
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: newBalance },
+        });
+
+        // Update wallet transaction status
+        await tx.walletTransaction.update({
+          where: { id: walletTransaction.id },
+          data: {
+            status: WalletTransactionStatus.COMPLETED,
+            balanceAfter: newBalance,
+          },
+        });
+
+        // Update payment status
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: PaymentStatus.SUCCESSFUL,
+            gatewayResponse,
+          },
+        });
+
+        // Send notification to user
+        await sendNotification({
+          userId: wallet.userId,
+          title: "Wallet Funded",
+          message: `Your wallet has been successfully funded with ${walletTransaction.amount} ${walletTransaction.currency}`,
+          type: "PAYMENT",
+          entityId: walletTransaction.id,
+          entityType: "WalletTransaction",
+        });
+      });
+
+      logger.info(
+        `Successfully processed wallet funding for payment ${paymentId}`
+      );
+    } catch (error) {
+      logger.error("Error processing successful wallet funding:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle failed wallet funding (NEW)
+   */
+  private async handleFailedWalletFunding(
+    paymentId: string,
+    gateway: PaymentGateway,
+    gatewayResponse: any
+  ): Promise<void> {
+    try {
+      // Find the payment and associated wallet transaction
+      const payment = await prisma.payment.findUnique({
+        where: { id: paymentId },
+        include: {
+          walletTransactions: {
+            where: { status: WalletTransactionStatus.PENDING },
+            include: { wallet: { include: { user: true } } },
+          },
+        },
+      });
+
+      if (!payment || payment.walletTransactions.length === 0) {
+        throw new Error("Payment or wallet transaction not found");
+      }
+
+      const walletTransaction = payment.walletTransactions[0];
+      const wallet = walletTransaction.wallet;
+
+      // Update transaction and payment status
+      await prisma.$transaction(async (tx) => {
+        // Mark wallet transaction as failed
+        await tx.walletTransaction.update({
+          where: { id: walletTransaction.id },
+          data: {
+            status: WalletTransactionStatus.FAILED,
+          },
+        });
+
+        // Update payment status
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: PaymentStatus.FAILED,
+            gatewayResponse,
+          },
+        });
+
+        // Send notification to user
+        await sendNotification({
+          userId: wallet.userId,
+          title: "Wallet Funding Failed",
+          message: `Your wallet funding of ${walletTransaction.amount} ${walletTransaction.currency} has failed. Please try again.`,
+          type: "PAYMENT",
+          entityId: walletTransaction.id,
+          entityType: "WalletTransaction",
+        });
+      });
+
+      logger.info(`Recorded failed wallet funding for payment ${paymentId}`);
+    } catch (error) {
+      logger.error("Error handling failed wallet funding:", error);
       throw error;
     }
   }
@@ -420,21 +677,33 @@ export class PaymentService {
       if (isSuccessful) {
         const payment = await prisma.payment.findFirst({
           where: { gatewayReference: reference },
-          include: { transactions: { take: 1 } },
+          include: {
+            transactions: { take: 1 },
+            walletTransactions: { take: 1 },
+          },
         });
 
-        if (!payment || payment.transactions.length === 0) {
-          throw new Error("Payment not found or no transactions associated");
+        if (!payment) {
+          throw new Error("Payment not found");
         }
 
-        // Process the successful payment
-        const transaction = payment.transactions[0];
-        await this.handleSuccessfulPayment(
-          payment.id,
-          transaction.id,
-          gateway,
-          { verificationMethod: "callback" }
-        );
+        // Handle verification based on payment type
+        const isWalletFunding = payment.walletTransactions.length > 0;
+        const isTransactionPayment = payment.transactions.length > 0;
+
+        if (isWalletFunding) {
+          await this.handleSuccessfulWalletFunding(payment.id, gateway, {
+            verificationMethod: "callback",
+          });
+        } else if (isTransactionPayment) {
+          const transaction = payment.transactions[0];
+          await this.handleSuccessfulTransactionPayment(
+            payment.id,
+            transaction.id,
+            gateway,
+            { verificationMethod: "callback" }
+          );
+        }
       }
 
       return isSuccessful;

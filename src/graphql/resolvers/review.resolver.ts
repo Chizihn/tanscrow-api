@@ -10,6 +10,7 @@ import { Review, CreateReviewInput } from "../types/review.type";
 import { GraphQLContext } from "../types/context.type";
 import { isAuthenticated } from "../middleware/auth.middleware";
 import { PrismaClient } from "../../generated/prisma-client";
+import { sendNotification } from "../../services/notification.service";
 
 const prisma = new PrismaClient();
 
@@ -55,11 +56,23 @@ export class ReviewResolver {
     }
 
     // Create the review
-    return prisma.review.create({
+    const review = await prisma.review.create({
       data: {
         ...input,
         reviewerId: user?.id as string,
       },
     });
+
+    // Send notification to seller about new review
+    await sendNotification({
+      userId: input.sellerId,
+      title: "New Review Received",
+      message: `You have received a new ${review.rating}-star review from a buyer`,
+      type: "REVIEW",
+      entityId: review.id,
+      entityType: "Review",
+    });
+
+    return review;
   }
 }

@@ -151,18 +151,19 @@ model TransactionLog {
 }
 
 model Payment {
-  id               String          @id @default(uuid())
-  amount           Decimal         @db.Decimal(10, 2)
-  fee              Decimal         @db.Decimal(10, 2)
-  totalAmount      Decimal         @db.Decimal(10, 2)
-  paymentCurrency  PaymentCurrency @default(NGN)
-  paymentGateway   PaymentGateway
-  gatewayReference String
-  gatewayResponse  Json?
-  status           PaymentStatus   @default(PENDING)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  transactions     Transaction[]
+  id                 String              @id @default(uuid())
+  amount             Decimal             @db.Decimal(10, 2)
+  fee                Decimal             @db.Decimal(10, 2)
+  totalAmount        Decimal             @db.Decimal(10, 2)
+  paymentCurrency    PaymentCurrency     @default(NGN)
+  paymentGateway     PaymentGateway
+  gatewayReference   String
+  gatewayResponse    Json?
+  status             PaymentStatus       @default(PENDING)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  transactions       Transaction[]
+  walletTransactions WalletTransaction[]
 
   @@index([gatewayReference])
   @@index([status])
@@ -186,6 +187,8 @@ model Wallet {
 model WalletTransaction {
   id            String                  @id @default(uuid())
   walletId      String
+  paymentId     String?
+  transactionId String?
   amount        Decimal                 @db.Decimal(10, 2)
   currency      PaymentCurrency         @default(NGN)
   description   String
@@ -197,9 +200,12 @@ model WalletTransaction {
   createdAt     DateTime                @default(now())
   updatedAt     DateTime                @updatedAt
   wallet        Wallet                  @relation(fields: [walletId], references: [id])
+  payment       Payment?                @relation(fields: [paymentId], references: [id])
 
   @@index([walletId])
   @@index([reference])
+  @@index([paymentId])
+  @@index([transactionId])
   @@index([type])
 }
 
@@ -456,7 +462,10 @@ enum NotificationType {
   DISPUTE
   VERIFICATION
   PAYMENT
+  SECURITY
   SYSTEM
+  REVIEW
+  WITHDRAWAL
 }
 
 enum TokenType {

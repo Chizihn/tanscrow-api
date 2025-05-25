@@ -1,4 +1,12 @@
-import { Resolver, Mutation, Arg, Ctx, UseMiddleware } from "type-graphql";
+import {
+  Resolver,
+  Mutation,
+  Arg,
+  Ctx,
+  UseMiddleware,
+  Query,
+  ID,
+} from "type-graphql";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { isAuthenticated } from "../middleware/auth.middleware";
@@ -6,6 +14,9 @@ import {
   BankWithdrawal,
   WithdrawToNigerianBankInput,
 } from "../types/withdrawal.type";
+import { Bank, AccountDetails, AccountResolveInput } from "../types/bank.type";
+import { BankService } from "../../services/bank.service";
+import { PaymentService } from "../../services/payment.service";
 import {
   WalletTransactionType,
   WalletTransactionStatus,
@@ -14,9 +25,50 @@ import {
 import { nanoid } from "nanoid";
 import { Decimal } from "../../generated/prisma-client/runtime/library";
 import { sendNotification } from "../../services/notification.service";
+import logger from "../../utils/logger";
 
 @Resolver(BankWithdrawal)
 export class WithdrawalResolver {
+  private bankService: BankService;
+
+  private paymentService: PaymentService;
+
+  constructor() {
+    this.bankService = BankService.getInstance();
+    this.paymentService = PaymentService.getInstance();
+  }
+
+  @Query(() => [Bank])
+  async getNigerianBanks(): Promise<Bank[]> {
+    try {
+      return await this.bankService.getNigerianBanks();
+    } catch (error) {
+      throw new Error("Failed to fetch Nigerian banks");
+    }
+  }
+
+  @Query(() => AccountDetails)
+  async resolveAccountDetails(
+    @Arg("input") input: AccountResolveInput
+  ): Promise<AccountDetails> {
+    try {
+      const accountDetails = await this.bankService.resolveAccountNumber(
+        input.accountNumber,
+        input.bankCode
+      );
+
+      const data = {
+        accountNumber: accountDetails.account_number as string,
+        accountName: accountDetails.account_name as string,
+        bankCode: accountDetails.bank_code as string,
+      };
+
+      return data;
+    } catch (error) {
+      throw new Error("Failed to resolve account details");
+    }
+  }
+
   @Mutation(() => BankWithdrawal)
   @UseMiddleware(isAuthenticated)
   async withdrawToNigerianBank(
@@ -95,5 +147,87 @@ export class WithdrawalResolver {
     });
 
     return result;
+  }
+
+  @Mutation(() => BankWithdrawal)
+  @UseMiddleware(isAuthenticated)
+  async confirmWithdrawal(
+    @Arg("id", () => ID) id: string,
+    @Ctx() { user }: GraphQLContext
+  ): Promise<BankWithdrawal> {
+    try {
+      // Fetch the withdrawal record
+      const withdrawal = await prisma.bankWithdrawal.findUnique({
+        where: { id },
+      });
+
+      if (!withdrawal) {
+        throw new Error("Withdrawal record not found");
+      }
+
+      if (withdrawal.userId !== user?.id) {
+        throw new Error("Not authorized to confirm this withdrawal");
+      }
+
+      if (withdrawal.status !== BankWithdrawalStatus.PENDING) {
+        throw new Error("Withdrawal is not in pending status");
+      }
+
+      // Initiate transfer via Paystack
+      const transferResponse = await this.paymentService.initiateTransfer({
+        amount: Number(withdrawal.amount),
+        recipient: {
+          accountNumber: withdrawal.accountNumber,
+          bankCode: withdrawal.bankCode,
+          accountName: withdrawal.accountName,
+        },
+        reference: withdrawal.reference as string,
+      });
+
+      if (!transferResponse.success) {
+        // Update withdrawal status to failed
+        const failedWithdrawal = await prisma.bankWithdrawal.update({
+          where: { id },
+          data: {
+            status: BankWithdrawalStatus.FAILED,
+            failureReason:
+              transferResponse.error || "Transfer initiation failed",
+          },
+        });
+
+        // Send failure notification
+        await sendNotification({
+          userId: user?.id as string,
+          title: "Withdrawal Failed",
+          message: `Your withdrawal of ${withdrawal.amount} ${withdrawal.currency} to ${withdrawal.bankName} account has failed. Reason: ${transferResponse.error}`,
+          type: "TRANSACTION",
+        });
+
+        return failedWithdrawal;
+      }
+
+      // Update withdrawal status to processing
+      const updatedWithdrawal = await prisma.bankWithdrawal.update({
+        where: { id },
+        data: {
+          status: BankWithdrawalStatus.PROCESSING,
+        },
+      });
+
+      // Send processing notification
+      await sendNotification({
+        userId: user?.id as string,
+        title: "Withdrawal Processing",
+        message: `Your withdrawal of ${withdrawal.amount} ${withdrawal.currency} to ${withdrawal.bankName} account is being processed.`,
+        type: "TRANSACTION",
+      });
+
+      return updatedWithdrawal;
+    } catch (error) {
+      logger.error("Withdrawal confirmation error:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to confirm withdrawal"
+      );
+    }
   }
 }

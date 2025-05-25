@@ -17,12 +17,6 @@ export class UpdateDeliveryInput {
 }
 
 @InputType()
-export class ConfirmDeliveryInput {
-  @Field(() => ID)
-  transactionId!: string;
-}
-
-@InputType()
 export class ReleaseEscrowInput {
   @Field(() => ID)
   transactionId!: string;
