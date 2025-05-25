@@ -3,10 +3,14 @@ import "reflect-metadata";
 import http from "http";
 import config from "./config/app.config";
 import cors from "cors";
-import express from "express";
+import express, { Request, Response } from "express";
 import { prisma } from "./config/db.config";
 import { ApolloServer } from "@apollo/server";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
+import {
+  ApolloServerPluginLandingPageLocalDefault,
+  ApolloServerPluginLandingPageProductionDefault,
+} from "@apollo/server/plugin/landingPage/default";
 import { expressMiddleware } from "@apollo/server/express4";
 import { createSchema } from "./graphql/schema";
 import { createContext } from "./graphql/context";
@@ -28,7 +32,17 @@ const startServer = async () => {
     // Create Apollo Server
     const apolloServer = new ApolloServer<MyContext>({
       schema,
-      plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+      plugins: [
+        ApolloServerPluginDrainHttpServer({ httpServer }),
+
+        // Install a landing page plugin based on NODE_ENV
+        config.NODE_ENV === "production"
+          ? ApolloServerPluginLandingPageProductionDefault({
+              graphRef: "my-graph-id@my-graph-variant",
+              footer: false,
+            })
+          : ApolloServerPluginLandingPageLocalDefault({ footer: false }),
+      ],
     });
 
     // Start Apollo Server
@@ -49,6 +63,10 @@ const startServer = async () => {
         context: createContext,
       })
     );
+
+    app.get("/", (req: Request, res: Response) => {
+      res.redirect("/graphql");
+    });
 
     app.listen(config.PORT, () => {
       console.log(`🚀 Server running on port ${config.PORT}`);
