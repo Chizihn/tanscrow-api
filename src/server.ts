@@ -38,7 +38,10 @@ const startServer = async () => {
     app.use(
       "/graphql",
       cors<cors.CorsRequest>({
-        origin: "http://localhost:3000",
+        origin:
+          config.NODE_ENV === "development"
+            ? "http://localhost:3000"
+            : "https://tanscrow.vercel.app",
         credentials: true, // Enable credentials (cookies)
       }),
       express.json(),

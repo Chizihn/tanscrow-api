@@ -17,6 +17,7 @@ import {
   TransferRecipient,
   TransferResponse,
 } from "../graphql/types/payment.type";
+import config from "../config/app.config";
 
 interface PaymentInitiationResponse {
   success: boolean;
@@ -734,7 +735,7 @@ export class PaymentService {
           email,
           amount: amount * 100, // Convert to kobo
           reference,
-          callback_url: `${process.env.APP_URL}/payment/verify/paystack`,
+          callback_url: `${config.APP_URL}/payment/verify/paystack`,
         },
         {
           headers: {
@@ -783,7 +784,7 @@ export class PaymentService {
           tx_ref: reference,
           amount: amount,
           currency: "NGN",
-          redirect_url: `${process.env.APP_URL}/payment/verify/flutterwave`,
+          redirect_url: `${config.APP_URL}/payment/verify/flutterwave`,
           customer: {
             email,
           },

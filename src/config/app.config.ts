@@ -15,6 +15,7 @@ interface Config {
   JWT_SECRET: string;
   JWT_SECRET_EXPIRES: string;
   NODE_ENV: string;
+  APP_URL: string;
   SMTP: SMTP;
   PAYSTACK: {
     SECRET_KEY: string;
@@ -28,6 +29,10 @@ const config: Config = {
   JWT_SECRET: process.env.JWT_SECRET || "secret",
   JWT_SECRET_EXPIRES: process.env.JWT_SECRET_EXPIRES as string,
   NODE_ENV: process.env.NODE_ENV as string,
+  APP_URL:
+    process.env.NODE_ENV === "development"
+      ? "localhost:3000"
+      : "https://tanscrow.vercel.app",
   SMTP: {
     HOST: process.env.SMTP_HOST || "",
     PORT: process.env.SMTP_PORT || "",
