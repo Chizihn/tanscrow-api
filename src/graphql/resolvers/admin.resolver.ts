@@ -17,7 +17,8 @@ import {
 } from "../types/admin.type";
 import { User } from "../types/user.type";
 import { Transaction } from "../types/transaction.type";
-import { PrismaClient, Prisma } from "../../generated/prisma-client";
+import { PrismaClient } from "@prisma/client";
+import { Prisma } from "../../generated/prisma-client";
 
 @Resolver()
 export class AdminResolver {
@@ -45,7 +46,8 @@ export class AdminResolver {
       ]);
 
     const totalTransactionVolume = transactions.reduce(
-      (sum, transaction) => sum + Number(transaction.amount),
+      (sum: number, transaction: Transaction) =>
+        sum + Number(transaction.amount),
       0
     );
 

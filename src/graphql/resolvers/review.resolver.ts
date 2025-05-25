@@ -9,8 +9,8 @@ import {
 import { Review, CreateReviewInput } from "../types/review.type";
 import { GraphQLContext } from "../types/context.type";
 import { isAuthenticated } from "../middleware/auth.middleware";
-import { PrismaClient } from "../../generated/prisma-client";
 import { sendNotification } from "../../services/notification.service";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 

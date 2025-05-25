@@ -1,9 +1,6 @@
 import { Request } from "express";
-import {
-  AuditAction,
-  AuditCategory,
-  PrismaClient,
-} from "../generated/prisma-client";
+import { AuditAction, AuditCategory } from "../generated/prisma-client";
+import { PrismaClient } from "@prisma/client";
 
 export interface AuditLogData {
   userId?: string;
