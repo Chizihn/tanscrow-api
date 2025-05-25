@@ -19,12 +19,13 @@ interface MyContext {
   token?: string;
 }
 
-const httpServer = http.createServer(app);
-
 const startServer = async () => {
   try {
     await prisma.$connect();
     console.log("📦 Connected to database");
+
+    // Create HTTP server
+    const httpServer = http.createServer(app);
 
     // Create GraphQL schema
     const schema = await createSchema();
@@ -34,19 +35,25 @@ const startServer = async () => {
       schema,
       plugins: [
         ApolloServerPluginDrainHttpServer({ httpServer }),
-
         // Install a landing page plugin based on NODE_ENV
         config.NODE_ENV === "production"
           ? ApolloServerPluginLandingPageProductionDefault({
-              graphRef: "my-graph-id@my-graph-variant",
               footer: false,
             })
-          : ApolloServerPluginLandingPageLocalDefault({ footer: false }),
+          : ApolloServerPluginLandingPageLocalDefault({
+              footer: false,
+              embed: true, // This helps with the Apollo Studio redirect issue
+            }),
       ],
     });
 
     // Start Apollo Server
     await apolloServer.start();
+
+    // Root redirect route
+    app.get("/", (req: Request, res: Response) => {
+      res.redirect("/graphql");
+    });
 
     // Apply Apollo middleware to Express
     app.use(
@@ -56,7 +63,7 @@ const startServer = async () => {
           config.NODE_ENV === "development"
             ? "http://localhost:3000"
             : "https://tanscrow.vercel.app",
-        credentials: true, // Enable credentials (cookies)
+        credentials: true,
       }),
       express.json(),
       expressMiddleware(apolloServer, {
@@ -64,11 +71,8 @@ const startServer = async () => {
       })
     );
 
-    app.get("/", (req: Request, res: Response) => {
-      res.redirect("/graphql");
-    });
-
-    app.listen(config.PORT, () => {
+    // Use httpServer.listen instead of app.listen
+    httpServer.listen(config.PORT, () => {
       console.log(`🚀 Server running on port ${config.PORT}`);
       console.log(
         `🚀 GraphQL endpoint: http://localhost:${config.PORT}/graphql`

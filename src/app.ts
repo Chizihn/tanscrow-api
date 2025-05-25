@@ -18,12 +18,4 @@ app.use(limiter);
 // app.use(requestLogger);
 app.use(errorMiddleware);
 
-app.get("/", async (req, res) => {
-  res.status(HttpStatusCode.Ok).json({
-    message: "Hello world",
-    status: "Ok",
-    timestamp: new Date().toISOString(),
-  });
-});
-
 export default app;
