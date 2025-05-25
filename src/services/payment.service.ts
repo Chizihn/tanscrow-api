@@ -7,6 +7,7 @@ import {
   AuditAction,
   AuditCategory,
   WalletTransactionStatus,
+  PrismaClient,
 } from "../generated/prisma-client";
 import { prisma } from "../config/db.config";
 import axios from "axios";
@@ -403,7 +404,7 @@ export class PaymentService {
         throw new Error(`Transaction not found: ${transactionId}`);
       }
 
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: PrismaClient) => {
         // Update payment status
         await tx.payment.update({
           where: { id: paymentId },
@@ -470,7 +471,7 @@ export class PaymentService {
         throw new Error(`Transaction not found: ${transactionId}`);
       }
 
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: PrismaClient) => {
         // Update payment status
         await tx.payment.update({
           where: { id: paymentId },
@@ -546,7 +547,7 @@ export class PaymentService {
       const wallet = walletTransaction.wallet;
 
       // Update wallet balance and transaction status
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: PrismaClient) => {
         // Update wallet balance
         const newBalance = wallet.balance.plus(walletTransaction.amount);
 
@@ -621,7 +622,7 @@ export class PaymentService {
       const wallet = walletTransaction.wallet;
 
       // Update transaction and payment status
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: PrismaClient) => {
         // Mark wallet transaction as failed
         await tx.walletTransaction.update({
           where: { id: walletTransaction.id },

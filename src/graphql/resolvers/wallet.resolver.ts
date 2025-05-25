@@ -20,6 +20,7 @@ import {
   WalletTransactionStatus,
   PaymentCurrency,
   PaymentStatus,
+  PrismaClient,
 } from "../../generated/prisma-client";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
@@ -122,7 +123,7 @@ export class WalletResolver {
       const gatewayReference = `WALLET-FUND-${wallet.id}-${Date.now()}`;
 
       // Create payment and wallet transaction records
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx: PrismaClient) => {
         const payment = await tx.payment.create({
           data: {
             amount: input.amount,
@@ -165,7 +166,7 @@ export class WalletResolver {
 
       // Clean up if payment initiation fails
       if (!initiationResponse.success) {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: PrismaClient) => {
           await tx.walletTransaction.delete({
             where: { id: result.walletTransaction.id },
           });
@@ -253,7 +254,7 @@ export class WalletResolver {
     }
 
     // Execute transfer
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: PrismaClient) => {
       const reference = `WT-${Date.now()}-${Math.random()
         .toString(36)
         .substring(7)}`;
@@ -313,7 +314,7 @@ export class WalletResolver {
       const wallet = walletTransaction.wallet;
 
       // Update wallet balance and transaction status
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: PrismaClient) => {
         // Update wallet balance
         const newBalance = wallet.balance.plus(walletTransaction.amount);
 
@@ -373,7 +374,7 @@ export class WalletResolver {
       const walletTransaction = payment.walletTransactions[0];
 
       // Update transaction and payment status
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: PrismaClient) => {
         // Mark wallet transaction as failed
         await tx.walletTransaction.update({
           where: { id: walletTransaction.id },

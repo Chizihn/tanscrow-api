@@ -7,7 +7,11 @@ import {
   ReportDateRangeInput,
 } from "../types/report.type";
 import { prisma } from "../../config/db.config";
-import { TransactionStatus, Transaction } from "../../generated/prisma-client";
+import {
+  TransactionStatus,
+  Transaction,
+  Dispute,
+} from "../../generated/prisma-client";
 import { GraphQLContext } from "../types/context.type";
 import { isAdmin } from "../middleware/auth.middleware";
 
@@ -103,7 +107,8 @@ export class ReportResolver {
     });
 
     const resolvedDisputes = disputes.filter(
-      (d) => d.status === TransactionStatus.REFUNDED
+      (d: { status: TransactionStatus }) =>
+        d.status === TransactionStatus.REFUNDED
     ).length;
 
     const totalDisputes = disputes.length;
@@ -111,8 +116,8 @@ export class ReportResolver {
     const disputeRate = (totalDisputes / totalTransactions) * 100;
 
     const resolutionTimes: number[] = disputes
-      .filter((d) => d.refundedAt)
-      .map((d) => d.refundedAt!.getTime() - d.createdAt.getTime());
+      .filter((d: { refundedAt: Date | null; createdAt: Date }) => d.refundedAt)
+      .map((d: Dispute) => d.resolvedAt!.getTime() - d.createdAt.getTime());
 
     const averageResolutionTime =
       resolutionTimes.length > 0
@@ -200,23 +205,30 @@ export class ReportResolver {
       0
     );
     const totalProcessingFees = transactions.reduce(
-      (sum: any, t: any) => sum + (t.payment?.fee || 0),
+      (sum: number, t: { payment?: { fee: number } }) =>
+        sum + (t.payment?.fee || 0),
       0
     );
 
-    const currencyGroups = transactions.reduce((groups, t) => {
-      const currency = t.paymentCurrency;
-      if (!groups[currency]) {
-        groups[currency] = {
-          currency,
-          totalAmount: 0,
-          transactionCount: 0,
-        };
-      }
-      groups[currency].totalAmount += t.amount.toNumber();
-      groups[currency].transactionCount += 1;
-      return groups;
-    }, {} as Record<string, CurrencyBreakdownItem>);
+    const currencyGroups = transactions.reduce(
+      (
+        groups: Record<string, CurrencyBreakdownItem>,
+        t: { paymentCurrency: string; amount: { toNumber: () => number } }
+      ) => {
+        const currency = t.paymentCurrency;
+        if (!groups[currency]) {
+          groups[currency] = {
+            currency,
+            totalAmount: 0,
+            transactionCount: 0,
+          };
+        }
+        groups[currency].totalAmount += t.amount.toNumber();
+        groups[currency].transactionCount += 1;
+        return groups;
+      },
+      {} as Record<string, CurrencyBreakdownItem>
+    );
 
     return {
       totalRevenue,

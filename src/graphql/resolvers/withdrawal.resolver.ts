@@ -21,6 +21,7 @@ import {
   WalletTransactionType,
   WalletTransactionStatus,
   BankWithdrawalStatus,
+  PrismaClient,
 } from "../../generated/prisma-client";
 import { nanoid } from "nanoid";
 import { Decimal } from "../../generated/prisma-client/runtime/library";
@@ -93,7 +94,7 @@ export class WithdrawalResolver {
     const reference = `WD-${nanoid(10)}`;
 
     // Create withdrawal record and update wallet in a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: PrismaClient) => {
       // Create bank withdrawal record
       const withdrawal = await tx.bankWithdrawal.create({
         data: {

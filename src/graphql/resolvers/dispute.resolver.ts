@@ -15,6 +15,7 @@ import {
 import {
   DisputeStatus,
   NotificationType,
+  PrismaClient,
   TransactionStatus,
 } from "../../generated/prisma-client";
 import { GraphQLContext } from "../types/context.type";
@@ -103,11 +104,11 @@ export class DisputeResolver {
       throw new Error("Dispute already exists for this transaction");
     }
 
-    const dispute = await prisma.$transaction(async (tx) => {
+    const dispute = await prisma.$transaction(async (tx: PrismaClient) => {
       const createdDispute = await tx.dispute.create({
         data: {
           transactionId: input.transactionId,
-          initiatorId: user.id as string,
+          initiatorId: user?.id ?? "",
           reason: input.reason,
           description: input.description,
           status: DisputeStatus.OPENED,
@@ -125,7 +126,7 @@ export class DisputeResolver {
       });
 
       const notifyUserId =
-        transaction.buyerId === user.id
+        transaction.buyerId === user?.id
           ? transaction.sellerId
           : transaction.buyerId;
 
@@ -215,46 +216,48 @@ export class DisputeResolver {
       throw new Error("Dispute is already closed");
     }
 
-    const updatedDispute = await prisma.$transaction(async (tx) => {
-      const resolved = await tx.dispute.update({
-        where: { id: input.disputeId },
-        data: {
-          status: input.resolution,
-          resolution: input.resolutionDetails,
-          resolvedAt: new Date(),
-          moderatorId: user?.id,
-        },
-        include: {
-          transaction: true,
-          initiator: true,
-          moderator: true,
-          evidence: true,
-        },
-      });
-
-      await tx.notification.createMany({
-        data: [
-          {
-            userId: dispute.transaction.buyerId,
-            title: "Dispute Resolution",
-            message: `The dispute for transaction ${dispute.transaction.transactionCode} has been resolved`,
-            type: NotificationType.DISPUTE,
-            relatedEntityId: dispute.id,
-            relatedEntityType: "Dispute",
+    const updatedDispute = await prisma.$transaction(
+      async (tx: PrismaClient) => {
+        const resolved = await tx.dispute.update({
+          where: { id: input.disputeId },
+          data: {
+            status: input.resolution,
+            resolution: input.resolutionDetails,
+            resolvedAt: new Date(),
+            moderatorId: user?.id,
           },
-          {
-            userId: dispute.transaction.sellerId,
-            title: "Dispute Resolution",
-            message: `The dispute for transaction ${dispute.transaction.transactionCode} has been resolved`,
-            type: NotificationType.DISPUTE,
-            relatedEntityId: dispute.id,
-            relatedEntityType: "Dispute",
+          include: {
+            transaction: true,
+            initiator: true,
+            moderator: true,
+            evidence: true,
           },
-        ],
-      });
+        });
 
-      return resolved;
-    });
+        await tx.notification.createMany({
+          data: [
+            {
+              userId: dispute.transaction.buyerId,
+              title: "Dispute Resolution",
+              message: `The dispute for transaction ${dispute.transaction.transactionCode} has been resolved`,
+              type: NotificationType.DISPUTE,
+              relatedEntityId: dispute.id,
+              relatedEntityType: "Dispute",
+            },
+            {
+              userId: dispute.transaction.sellerId,
+              title: "Dispute Resolution",
+              message: `The dispute for transaction ${dispute.transaction.transactionCode} has been resolved`,
+              type: NotificationType.DISPUTE,
+              relatedEntityId: dispute.id,
+              relatedEntityType: "Dispute",
+            },
+          ],
+        });
+
+        return resolved;
+      }
+    );
 
     return updatedDispute;
   }

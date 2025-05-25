@@ -293,7 +293,7 @@ export async function subscribeToNotifications({
     if (preferences) {
       // Remove the specified types from disabledTypes
       const updatedDisabledTypes = preferences.disabledTypes.filter(
-        (type) => !types.includes(type)
+        (type: NotificationType) => !types.includes(type)
       );
 
       return prisma.notificationPreferences.update({

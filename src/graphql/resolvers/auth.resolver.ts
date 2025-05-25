@@ -199,7 +199,11 @@ export class AuthResolver {
     });
     if (!currentUser) throw new Error("User not found");
 
-    if (currentUser.providers.some((p) => p.provider === ProviderType.EMAIL)) {
+    if (
+      currentUser.providers.some(
+        (p: { provider: ProviderType }) => p.provider === ProviderType.EMAIL
+      )
+    ) {
       throw new Error("User already has an email provider");
     }
 
@@ -233,7 +237,11 @@ export class AuthResolver {
     });
     if (!currentUser) throw new Error("User not found");
 
-    if (currentUser.providers.some((p) => p.provider === ProviderType.PHONE)) {
+    if (
+      currentUser.providers.some(
+        (p: { provider: ProviderType }) => p.provider === ProviderType.PHONE
+      )
+    ) {
       throw new Error("User already has a phone provider");
     }
 

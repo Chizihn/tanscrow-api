@@ -26,6 +26,7 @@ import {
   WalletTransactionType,
   WalletTransactionStatus,
   PaymentGateway,
+  PrismaClient,
 } from "../../generated/prisma-client";
 import { generateTransactionCode } from "../../utils/transaction";
 import { calculateEscrowFee } from "../../utils/fees";
@@ -261,7 +262,7 @@ export class TransactionResolver {
     }
 
     // Execute payment using wallet funds
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: PrismaClient) => {
       // 1. Move funds from buyer's balance to escrow
       const newBuyerBalance = buyerWallet.balance.minus(totalAmount);
       const newBuyerEscrowBalance = buyerWallet.escrowBalance.plus(totalAmount);
@@ -432,32 +433,34 @@ export class TransactionResolver {
 
     // Update transaction status to DELIVERED and handle escrow release in a single transaction
     try {
-      updatedTransaction = await prisma.$transaction(async (tx) => {
-        // First update the transaction status
-        const updated = await tx.transaction.update({
-          where: { id: transactionId },
-          data: {
-            status: TransactionStatus.DELIVERED,
-            actualDeliveryDate: new Date(),
-            logs: {
-              create: {
-                action: "DELIVERY_CONFIRMED",
-                status: TransactionStatus.DELIVERED,
-                escrowStatus: transaction.escrowStatus,
-                performedBy: user?.id as string,
-                description: "Delivery confirmed by buyer",
+      updatedTransaction = await prisma.$transaction(
+        async (tx: PrismaClient) => {
+          // First update the transaction status
+          const updated = await tx.transaction.update({
+            where: { id: transactionId },
+            data: {
+              status: TransactionStatus.DELIVERED,
+              actualDeliveryDate: new Date(),
+              logs: {
+                create: {
+                  action: "DELIVERY_CONFIRMED",
+                  status: TransactionStatus.DELIVERED,
+                  escrowStatus: transaction.escrowStatus,
+                  performedBy: user?.id as string,
+                  description: "Delivery confirmed by buyer",
+                },
               },
             },
-          },
-          include: {
-            buyer: true,
-            seller: true,
-            payment: true,
-            logs: true,
-          },
-        });
-        return updated;
-      });
+            include: {
+              buyer: true,
+              seller: true,
+              payment: true,
+              logs: true,
+            },
+          });
+          return updated;
+        }
+      );
     } catch (error) {
       logger.error("Error updating transaction status:", error);
       throw new Error("Failed to confirm delivery");
@@ -488,7 +491,7 @@ export class TransactionResolver {
       const amount = transaction.amount;
       const totalAmount = transaction.totalAmount; // This includes escrow fee
 
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: PrismaClient) => {
         // 1. Update buyer's escrow balance (reduce it)
         const newBuyerEscrowBalance =
           buyerWallet.escrowBalance.minus(totalAmount);
