@@ -58,7 +58,14 @@ const startServer = async () => {
     app.use(
       "/graphql",
       cors<cors.CorsRequest>({
-        origin: [config.APP_URL, config.NGROK_SERVER],
+        origin:
+          config.NODE_ENV === "development"
+            ? [
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://127.0.0.1:4040",
+              ]
+            : [config.APP_URL],
         credentials: true,
       }),
       express.json(),
@@ -70,7 +77,9 @@ const startServer = async () => {
     // Use httpServer.listen instead of app.listen
     httpServer.listen(config.PORT, () => {
       console.log(`🚀 Server running on port ${config.PORT}`);
-      console.log(`🚀 GraphQL endpoint: ${config.GRAPHQL_ENDPOINT}`);
+      console.log(
+        `🚀 GraphQL endpoint: http://localhost:${config.PORT}/graphql`
+      );
     });
   } catch (error) {
     console.error("Failed to start server:", error);
