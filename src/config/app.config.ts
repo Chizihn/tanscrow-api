@@ -49,7 +49,7 @@ const config: Config = {
   GRAPHQL_ENDPOINT:
     process.env.NODE_ENV === "development"
       ? `http://localhost:${process.env.PORT}/graphql`
-      : `${process.env.APP_URL}/graphql`,
+      : `${process.env.API_URL}/graphql`,
   NGROK_SERVER:
     process.env.NODE_ENV === "development"
       ? "http://127.0.0.1:4040"
