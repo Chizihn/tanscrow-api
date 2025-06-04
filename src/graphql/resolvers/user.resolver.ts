@@ -6,7 +6,7 @@ import {
   UseMiddleware,
   Mutation,
 } from "type-graphql";
-import { User } from "../types/user.type";
+import { SearchUserInput, User } from "../types/user.type";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { isAdmin, isAuthenticated } from "../middleware/auth.middleware";
@@ -16,9 +16,14 @@ import {
   AddEmailInput,
   AddPhoneInput,
 } from "../types/profile.type";
-import { Provider, ProviderType, TokenType } from "@prisma/client";
+import {
+  AccountType,
+  Provider,
+  ProviderType,
+  SearchUserType,
+  TokenType,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { Dispute } from "../types/dispute.type";
 import { BadRequestException } from "../../utils/appError";
 import { ErrorCodeEnum } from "../../enums/error-code.enum";
 
@@ -31,8 +36,9 @@ export class UserResolver {
     if (!user?.id) return null;
 
     const fullUser = await prisma.user.findUnique({
-      where: { id: user.id },
+      where: { id: user?.id },
       include: {
+        address: true,
         providers: true,
       },
     });
@@ -58,9 +64,50 @@ export class UserResolver {
     @Arg("input") input: UpdateProfileInput,
     @Ctx() { user }: GraphQLContext
   ): Promise<User> {
+    const {
+      firstName,
+      lastName,
+      phoneNumber,
+      street,
+      city,
+      state,
+      postalCode,
+      country,
+    } = input;
+
+    // Extract address fields
+    const addressFields = { street, city, state, postalCode, country };
+    const hasAddressFields = Object.values(addressFields).some(
+      (field) => field !== undefined
+    );
+
+    const updateData: any = {
+      firstName,
+      lastName,
+      phoneNumber,
+    };
+
+    // Handle address update using nested operations
+    if (hasAddressFields) {
+      if (user?.addressId) {
+        // Update existing address
+        updateData.address = {
+          update: addressFields,
+        };
+      } else {
+        // Create new address
+        updateData.address = {
+          create: addressFields,
+        };
+      }
+    }
+
     return prisma.user.update({
       where: { id: user?.id },
-      data: input,
+      data: updateData,
+      include: {
+        address: true,
+      },
     });
   }
 
@@ -217,20 +264,62 @@ export class UserResolver {
 
   @Query(() => User, {
     nullable: true,
-    description: "Find user by email adress or phone number",
+    description: "Find user by email address or phone number",
   })
-  async searchUser(@Arg("input") input: string): Promise<User | null> {
-    if (!input) {
+  async searchUser(
+    @Arg("input") input: SearchUserInput,
+    @Ctx() { user }: GraphQLContext
+  ): Promise<User | null> {
+    // 1. More robust input validation
+    if (!input?.query?.trim()) {
       throw new BadRequestException(
-        "Please enter either an email adress or phone number!",
+        "Please enter either an email address or phone number!",
         ErrorCodeEnum.INVALID_INPUT
       );
     }
 
-    const isEmail = input.includes("@");
+    const query = input.query.trim().toLowerCase();
 
-    return prisma.user.findFirst({
-      where: isEmail ? { email: input } : { phoneNumber: input },
+    // 2. Email detection
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmail = emailRegex.test(query);
+
+    // 3. Phone number validation
+    if (!isEmail) {
+      const phoneRegex = /^[\+]?[\d\s\-\(\)]+$/;
+      if (!phoneRegex.test(query)) {
+        throw new BadRequestException(
+          "Invalid email or phone number format",
+          ErrorCodeEnum.INVALID_INPUT
+        );
+      }
+    }
+
+    const existingUser = await prisma.user.findFirst({
+      where: isEmail ? { email: query } : { phoneNumber: query },
     });
+
+    if (!existingUser) return null;
+
+    // 4. Prevent searching for Admins unless current user is also an Admin
+    if (
+      existingUser.accountType === AccountType.ADMIN &&
+      user?.accountType !== AccountType.ADMIN
+    ) {
+      return null;
+    }
+
+    // 5. Prevent searching for yourself in a transaction context
+    if (
+      input.searchType === SearchUserType.TRANSACTION &&
+      existingUser.id === user?.id
+    ) {
+      throw new BadRequestException(
+        "You can't party yourself for a transaction!",
+        ErrorCodeEnum.INVALID_ACTION
+      );
+    }
+
+    return existingUser;
   }
 }

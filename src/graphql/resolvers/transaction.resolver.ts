@@ -7,11 +7,7 @@ import {
   ID,
   UseMiddleware,
 } from "type-graphql";
-import {
-  Transaction,
-  CreateTransactionInput,
-  ProcessPaymentInput,
-} from "../types/transaction.type";
+import { Transaction, CreateTransactionInput } from "../types/transaction.type";
 import {
   UpdateDeliveryInput,
   ReleaseEscrowInput,
@@ -21,11 +17,9 @@ import {
 import {
   TransactionStatus,
   EscrowStatus,
-  PaymentStatus,
   PaymentCurrency,
   WalletTransactionType,
   WalletTransactionStatus,
-  PaymentGateway,
 } from "@prisma/client";
 import { generateTransactionCode } from "../../utils/transaction";
 import { calculateEscrowFee } from "../../utils/fees";
@@ -37,12 +31,8 @@ import {
   sendEmail,
   sendNotification,
 } from "../../services/notification.service";
-import { TransactionAuditService } from "../../services/transaction-audit.service";
 import logger from "../../utils/logger";
-import { PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
-
-const transactionAudit = new TransactionAuditService();
 
 @Resolver(Transaction)
 export class TransactionResolver {
@@ -254,19 +244,17 @@ export class TransactionResolver {
 
     const totalAmount = transaction.totalAmount;
 
-    logger.info("user wallet", buyerWallet);
-
     // Check if buyer has sufficient funds
     if (buyerWallet.balance.lessThan(totalAmount)) {
       throw new Error("Insufficient wallet balance");
     }
 
-    // Execute payment using wallet funds
-    return prisma.$transaction(async (tx) => {
-      // 1. Move funds from buyer's balance to escrow
+    // Run DB transaction logic
+    const updatedTransaction = await prisma.$transaction(async (tx) => {
       const newBuyerBalance = buyerWallet.balance.minus(totalAmount);
       const newBuyerEscrowBalance = buyerWallet.escrowBalance.plus(totalAmount);
 
+      // 1. Update buyer wallet
       await tx.wallet.update({
         where: { id: buyerWallet.id },
         data: {
@@ -293,8 +281,8 @@ export class TransactionResolver {
         },
       });
 
-      // 3. Update transaction status
-      const updatedTransaction = await tx.transaction.update({
+      // 3. Update transaction status and create log
+      return tx.transaction.update({
         where: { id: transactionId },
         data: {
           status: TransactionStatus.IN_PROGRESS,
@@ -312,19 +300,19 @@ export class TransactionResolver {
         },
         include: { buyer: true, seller: true, logs: true },
       });
-
-      // 4. Send notification to seller
-      await sendNotification({
-        userId: transaction.sellerId,
-        title: "Payment Received",
-        message: `Payment for transaction ${transaction.transactionCode} has been confirmed`,
-        type: "PAYMENT",
-        entityId: transactionId,
-        entityType: "Transaction",
-      });
-
-      return updatedTransaction;
     });
+
+    // 4. Send notification OUTSIDE the transaction
+    await sendNotification({
+      userId: transaction.sellerId,
+      title: "Payment Received",
+      message: `Payment for transaction ${transaction.transactionCode} has been confirmed`,
+      type: "PAYMENT",
+      entityId: transactionId,
+      entityType: "Transaction",
+    });
+
+    return updatedTransaction;
   }
 
   @Mutation(() => Transaction)

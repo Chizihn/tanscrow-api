@@ -9,6 +9,10 @@ import { WalletResolver } from "./resolvers/wallet.resolver";
 import { NotificationResolver } from "./resolvers/notification.resolver";
 import { PaymentResolver } from "./resolvers/payment.resolver";
 import { WithdrawalResolver } from "./resolvers/withdrawal.resolver";
+import { AuditLogResolver } from "./resolvers/audit-log.resolver";
+import { AdminResolver } from "./resolvers/admin.resolver";
+import { ReportResolver } from "./resolvers/report.resolver";
+import { DashboardResolver } from "./resolvers/dashboard.resolver";
 
 export const createSchema = async () => {
   return buildSchema({
@@ -23,6 +27,10 @@ export const createSchema = async () => {
       NotificationResolver,
       PaymentResolver,
       WithdrawalResolver,
+      AuditLogResolver,
+      AdminResolver,
+      ReportResolver,
+      DashboardResolver,
     ],
     validate: false,
     emitSchemaFile: true,

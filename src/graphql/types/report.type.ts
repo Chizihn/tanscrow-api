@@ -103,6 +103,15 @@ export class CurrencyBreakdown {
   transactionCount!: number;
 }
 
+@ObjectType()
+export class DateRangeOutput {
+  @Field(() => Date)
+  startDate!: Date;
+
+  @Field(() => Date)
+  endDate!: Date;
+}
+
 @InputType()
 export class ReportDateRangeInput {
   @Field(() => Date)

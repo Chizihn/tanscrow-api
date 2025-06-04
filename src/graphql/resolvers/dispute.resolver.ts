@@ -20,7 +20,6 @@ import {
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { isAdmin, isAuthenticated } from "../middleware/auth.middleware";
-import { PrismaClient } from "@prisma/client";
 
 @Resolver(Dispute)
 export class DisputeResolver {
@@ -57,7 +56,12 @@ export class DisputeResolver {
     const dispute = await prisma.dispute.findUnique({
       where: { id },
       include: {
-        transaction: true,
+        transaction: {
+          include: {
+            buyer: true,
+            seller: true,
+          },
+        },
         initiator: true,
         moderator: true,
         evidence: true,

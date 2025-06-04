@@ -14,7 +14,7 @@ import {
   BankWithdrawal,
   WithdrawToNigerianBankInput,
 } from "../types/withdrawal.type";
-import { Bank, AccountDetails, AccountResolveInput } from "../types/bank.type";
+import { AccountDetails, AccountResolveInput } from "../types/bank.type";
 import { BankService } from "../../services/bank.service";
 import { PaymentService } from "../../services/payment.service";
 import {
@@ -26,7 +26,6 @@ import { nanoid } from "nanoid";
 
 import { sendNotification } from "../../services/notification.service";
 import logger from "../../utils/logger";
-import { PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { isVerified } from "../middleware/verification.middleware";
 
@@ -39,15 +38,6 @@ export class WithdrawalResolver {
   constructor() {
     this.bankService = BankService.getInstance();
     this.paymentService = PaymentService.getInstance();
-  }
-
-  @Query(() => [Bank])
-  async getNigerianBanks(): Promise<Bank[]> {
-    try {
-      return await this.bankService.getNigerianBanks();
-    } catch (error) {
-      throw new Error("Failed to fetch Nigerian banks");
-    }
   }
 
   @Query(() => AccountDetails)
@@ -127,7 +117,7 @@ export class WithdrawalResolver {
           reference,
           balanceBefore,
           balanceAfter,
-          status: WalletTransactionStatus.COMPLETED,
+          status: WalletTransactionStatus.PENDING,
         },
       });
 
@@ -189,14 +179,28 @@ export class WithdrawalResolver {
       });
 
       if (!transferResponse.success) {
-        // Update withdrawal status to failed
-        const failedWithdrawal = await prisma.bankWithdrawal.update({
-          where: { id },
-          data: {
-            status: BankWithdrawalStatus.FAILED,
-            failureReason:
-              transferResponse.error || "Transfer initiation failed",
-          },
+        // Update both withdrawal and wallet transaction status to failed
+        const failedWithdrawal = await prisma.$transaction(async (tx) => {
+          // Update bank withdrawal status to failed
+          const updatedWithdrawal = await tx.bankWithdrawal.update({
+            where: { id },
+            data: {
+              status: BankWithdrawalStatus.FAILED,
+              failureReason:
+                transferResponse.error || "Transfer initiation failed",
+            },
+          });
+
+          // Update wallet transaction status to failed
+          await tx.walletTransaction.updateMany({
+            where: {
+              reference: withdrawal.reference as string,
+              type: WalletTransactionType.WITHDRAWAL,
+            },
+            data: { status: WalletTransactionStatus.FAILED },
+          });
+
+          return updatedWithdrawal;
         });
 
         // Send failure notification
@@ -210,12 +214,24 @@ export class WithdrawalResolver {
         return failedWithdrawal;
       }
 
-      // Update withdrawal status to processing
-      const updatedWithdrawal = await prisma.bankWithdrawal.update({
-        where: { id },
-        data: {
-          status: BankWithdrawalStatus.PROCESSING,
-        },
+      // Update both withdrawal and wallet transaction status to processing/completed
+      const updatedWithdrawal = await prisma.$transaction(async (tx) => {
+        // Update bank withdrawal status to processing
+        const withdrawal = await tx.bankWithdrawal.update({
+          where: { id },
+          data: { status: BankWithdrawalStatus.PROCESSING },
+        });
+
+        // Update wallet transaction status to completed when processing starts
+        await tx.walletTransaction.updateMany({
+          where: {
+            reference: withdrawal.reference as string,
+            type: WalletTransactionType.WITHDRAWAL,
+          },
+          data: { status: WalletTransactionStatus.COMPLETED },
+        });
+
+        return withdrawal;
       });
 
       // Send processing notification
@@ -233,5 +249,22 @@ export class WithdrawalResolver {
         error instanceof Error ? error.message : "Failed to confirm withdrawal"
       );
     }
+  }
+
+  @Query(() => [BankWithdrawal])
+  @UseMiddleware(isAuthenticated)
+  async getBankWithdrawals(
+    @Ctx() { user }: GraphQLContext
+  ): Promise<BankWithdrawal[]> {
+    const withdrawals = await prisma.bankWithdrawal.findMany({
+      where: {
+        userId: user?.id,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return withdrawals;
   }
 }

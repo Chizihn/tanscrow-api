@@ -1,4 +1,3 @@
-// wallet.resolver.ts
 import {
   Resolver,
   Query,
@@ -10,7 +9,6 @@ import {
 import {
   Wallet,
   WalletTransaction,
-  CreateWalletInput,
   PaymentInitiationResponse,
   WalletTransferInput,
 } from "../types/wallet.type";
@@ -18,7 +16,6 @@ import { FundWalletInput } from "../types/wallet.input";
 import {
   WalletTransactionType,
   WalletTransactionStatus,
-  PaymentCurrency,
   PaymentStatus,
 } from "@prisma/client";
 import { GraphQLContext } from "../types/context.type";
@@ -61,35 +58,6 @@ export class WalletResolver {
     return prisma.walletTransaction.findMany({
       where: { walletId: wallet.id },
       orderBy: { createdAt: "desc" },
-    });
-  }
-
-  @Mutation(() => Wallet)
-  @UseMiddleware(isAuthenticated)
-  async createWallet(
-    @Arg("input") input: CreateWalletInput,
-    @Ctx() { user }: GraphQLContext
-  ): Promise<Wallet> {
-    const existingWallet = await prisma.wallet.findUnique({
-      where: { userId: user?.id },
-    });
-
-    if (existingWallet) {
-      throw new Error("User already has a wallet");
-    }
-
-    // Convert string currency to PaymentCurrency enum
-    const currency = input.currency as PaymentCurrency;
-
-    return prisma.wallet.create({
-      data: {
-        userId: user?.id as string,
-        currency: currency,
-        balance: 0,
-        escrowBalance: 0,
-        isActive: true,
-      },
-      include: { transactions: true },
     });
   }
 

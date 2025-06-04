@@ -21,6 +21,8 @@ interface Config {
     SECRET_KEY: string;
   };
   LOG_LEVEL: string;
+  GRAPHQL_ENDPOINT: string;
+  NGROK_SERVER: string;
 }
 
 const config: Config = {
@@ -31,8 +33,8 @@ const config: Config = {
   NODE_ENV: process.env.NODE_ENV as string,
   APP_URL:
     process.env.NODE_ENV === "development"
-      ? "localhost:3000"
-      : "https://tanscrow.vercel.app",
+      ? "http://localhost:3000"
+      : (process.env.APP_URL as string),
   SMTP: {
     HOST: process.env.SMTP_HOST || "",
     PORT: process.env.SMTP_PORT || "",
@@ -44,6 +46,14 @@ const config: Config = {
     SECRET_KEY: process.env.PAYSTACK_SECRET_KEY || "",
   },
   LOG_LEVEL: process.env.LOG_LEVEL as string,
+  GRAPHQL_ENDPOINT:
+    process.env.NODE_ENV === "development"
+      ? `http://localhost:${process.env.PORT}/graphql`
+      : `${process.env.APP_URL}/graphql`,
+  NGROK_SERVER:
+    process.env.NODE_ENV === "development"
+      ? "http://127.0.0.1:4040"
+      : (process.env.NGROK_SERVER as string),
 };
 
 export default config;
