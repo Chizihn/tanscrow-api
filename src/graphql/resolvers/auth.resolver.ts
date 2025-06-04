@@ -288,7 +288,6 @@ export class AuthResolver {
       TokenType.EMAIL_VERIFICATION
     );
     await authService.markUserAsVerified(tokenRecord.userId);
-    await authService.deleteToken(tokenRecord.id);
 
     // Send verification success notification
     await sendNotification({
@@ -389,8 +388,6 @@ export class AuthResolver {
       data: { password: hashed },
     });
 
-    await authService.deleteToken(tokenRecord.id);
-
     const user = await prisma.user.findUnique({
       where: { id: tokenRecord.userId },
     });
@@ -451,11 +448,15 @@ export class AuthResolver {
       throw new Error("Invalid or expired OTP");
     }
 
+    const tokenRecord = await authService.validateToken(
+      input.otp,
+      TokenType.PHONE_OTP
+    );
+
     await authService.markUserAsVerified(user.id);
-    await authService.deleteToken(otpToken.id);
 
     await sendNotification({
-      userId: user.id,
+      userId: tokenRecord.userId,
       title: "Phone Number Verified",
       message: "Your phone number has been successfully verified.",
       type: "VERIFICATION",

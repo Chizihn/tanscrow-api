@@ -17,6 +17,8 @@ input AccountResolveInput {
 """The type of user account"""
 enum AccountType {
   ADMIN
+  MANAGER
+  SUPERADMIN
   USER
 }
 
@@ -715,7 +717,7 @@ input UpdateProfileInput {
 
 type User {
   accountType: AccountType!
-  address: Address!
+  address: Address
   addressId: String
   createdAt: DateTimeISO!
   email: String

@@ -116,8 +116,4 @@ export class AuthService {
       data: { verified: true },
     });
   }
-
-  async deleteToken(id: string): Promise<void> {
-    await prisma.verificationToken.delete({ where: { id } });
-  }
 }

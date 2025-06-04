@@ -123,7 +123,7 @@ export class User {
   @Field(() => [Provider])
   providers?: Provider[];
 
-  @Field(() => Address)
+  @Field(() => Address, { nullable: true })
   address?: Address | null;
 
   // @Field(() => [VerificationDocument])
