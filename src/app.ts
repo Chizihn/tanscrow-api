@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import { limiter } from "./middleware/limiter.middleware";
-import { HttpStatusCode } from "axios";
 import requestLogger from "./middleware/logger.middleware";
 import errorMiddleware from "./middleware/error.middleware";
 import { webhookRoutes } from "./routes/webhook.routes";
@@ -16,7 +15,14 @@ app.use(express.urlencoded({ extended: true }));
 // ADD CORS MIDDLEWARE FOR ALL ROUTES (including webhooks)
 app.use(
   cors({
-    origin: [config.APP_URL, config.NGROK_SERVER],
+    origin:
+      config.NODE_ENV === "development"
+        ? [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:4040",
+          ]
+        : [config.APP_URL],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

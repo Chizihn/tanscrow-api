@@ -22,7 +22,6 @@ interface Config {
   };
   LOG_LEVEL: string;
   GRAPHQL_ENDPOINT: string;
-  NGROK_SERVER: string;
 }
 
 const config: Config = {
@@ -50,10 +49,6 @@ const config: Config = {
     process.env.NODE_ENV === "development"
       ? `http://localhost:${process.env.PORT}/graphql`
       : `${process.env.API_URL}/graphql`,
-  NGROK_SERVER:
-    process.env.NODE_ENV === "development"
-      ? "http://127.0.0.1:4040"
-      : (process.env.NGROK_SERVER as string),
 };
 
 export default config;
