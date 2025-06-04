@@ -8,10 +8,6 @@ const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 
-// Email configuration
-const emailApiKey = process.env.EMAIL_API_KEY;
-const emailSender = process.env.EMAIL_SENDER || "noreply@tanscrow.com";
-
 /**
  * Send notification to a user through multiple channels based on their preferences
  */

@@ -56,8 +56,19 @@ export class AuthResolver {
       include: { providers: true, verificationTokens: true },
     });
 
+    // Automatically create wallet for new user
+    await prisma.wallet.create({
+      data: {
+        userId: user.id,
+        currency: "NGN",
+        balance: 0,
+        escrowBalance: 0,
+        isActive: true,
+      },
+    });
+
     const token = await authService.generateVerificationToken(
-      user.id,
+      user?.id as string,
       TokenType.EMAIL_VERIFICATION,
       24
     );
@@ -68,8 +79,8 @@ export class AuthResolver {
       subject: "Verify your email address",
       body: `Hello ${
         user.firstName
-      }, use this code ${token} tp verify your email address. Note, it expires in ${
-        user.verificationTokens[-1]?.expiresAt
+      }, use this code ${token} t0 verify your email address. Note, it expires in ${
+        user.verificationTokens?.[user.verificationTokens.length - 1]?.expiresAt
       } hour(s)`,
     });
 
@@ -109,6 +120,17 @@ export class AuthResolver {
         },
       },
       include: { providers: true },
+    });
+
+    // Automatically create wallet for new user
+    await prisma.wallet.create({
+      data: {
+        userId: user.id,
+        currency: "NGN",
+        balance: 0,
+        escrowBalance: 0,
+        isActive: true,
+      },
     });
 
     const otp = await authService.generateOtp(user.id, TokenType.PHONE_OTP, 15);
@@ -257,7 +279,10 @@ export class AuthResolver {
   }
 
   @Mutation(() => Boolean)
-  async verifyEmail(@Arg("input") input: VerifyEmailInput): Promise<boolean> {
+  async verifyEmail(
+    @Arg("input") input: VerifyEmailInput,
+    @Ctx() { user }: GraphQLContext
+  ): Promise<boolean> {
     const tokenRecord = await authService.validateToken(
       input.token,
       TokenType.EMAIL_VERIFICATION

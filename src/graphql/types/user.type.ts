@@ -1,10 +1,17 @@
-import { Field, ID, ObjectType, registerEnumType } from "type-graphql";
+import {
+  Field,
+  ID,
+  InputType,
+  ObjectType,
+  registerEnumType,
+} from "type-graphql";
 import {
   User as PrismaUser,
   AccountType,
   ProviderType,
   Provider as PrismaProvider,
   Address as PrismaAdress,
+  SearchUserType,
 } from "@prisma/client";
 
 // Register the AccountType enum for GraphQL
@@ -19,9 +26,14 @@ registerEnumType(ProviderType, {
   description: "The type of authentication provider",
 });
 
+registerEnumType(SearchUserType, {
+  name: "SearchUserType",
+  description: "The type for using the search user query",
+});
+
 //Address
 @ObjectType()
-export class Address implements Partial<PrismaAdress> {
+export class Address {
   @Field(() => ID)
   id?: string;
 
@@ -35,7 +47,7 @@ export class Address implements Partial<PrismaAdress> {
   state?: string;
 
   @Field(() => String)
-  postalCode?: string;
+  postalCode?: string | null;
 
   @Field(() => String)
   country?: string;
@@ -74,7 +86,7 @@ export class Provider implements Partial<PrismaProvider> {
 
 // User
 @ObjectType()
-export class User implements Partial<PrismaUser> {
+export class User {
   @Field(() => ID)
   id?: string;
 
@@ -111,9 +123,18 @@ export class User implements Partial<PrismaUser> {
   @Field(() => [Provider])
   providers?: Provider[];
 
-  @Field(() => Address, { nullable: true })
-  address?: Address;
+  @Field(() => Address)
+  address?: Address | null;
 
   // @Field(() => [VerificationDocument])
   // verificationDocuments?: VerificationDocument[];
+}
+
+@InputType()
+export class SearchUserInput {
+  @Field(() => String)
+  query!: string;
+
+  @Field(() => SearchUserType)
+  searchType!: SearchUserType;
 }

@@ -43,36 +43,6 @@ export class BankService {
     );
   }
 
-  public async getNigerianBanks(): Promise<Bank[]> {
-    try {
-      if (this.isCacheValid()) {
-        return this.bankListCache!;
-      }
-
-      if (!this.paystackSecretKey) {
-        throw new Error("Paystack secret key not configured");
-      }
-
-      const response = await axios.get<{ data: Bank[] }>(
-        `${this.paystackBaseUrl}/bank`,
-        {
-          headers: {
-            Authorization: `Bearer ${this.paystackSecretKey}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      this.bankListCache = response.data.data;
-      this.lastCacheTime = Date.now();
-
-      return this.bankListCache;
-    } catch (error) {
-      logger.error("Error fetching Nigerian banks:", error);
-      throw new Error("Failed to fetch Nigerian banks");
-    }
-  }
-
   public async resolveAccountNumber(
     accountNumber: string,
     bankCode: string

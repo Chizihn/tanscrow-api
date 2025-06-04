@@ -7,7 +7,7 @@ import {
   ReportDateRangeInput,
 } from "../types/report.type";
 import { prisma } from "../../config/db.config";
-import { TransactionStatus, Transaction, Dispute } from "@prisma/client";
+import { TransactionStatus, Transaction } from "@prisma/client";
 import { GraphQLContext } from "../types/context.type";
 import { isAdmin } from "../middleware/auth.middleware";
 

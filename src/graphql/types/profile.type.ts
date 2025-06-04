@@ -9,28 +9,22 @@ export class UpdateProfileInput {
   lastName?: string;
 
   @Field(() => String, { nullable: true })
-  profileImageUrl?: string;
-
-  @Field(() => String, { nullable: true })
   phoneNumber?: string;
 
   @Field(() => String, { nullable: true })
-  addressId?: string;
+  street!: string;
 
   @Field(() => String, { nullable: true })
-  street?: string;
+  city!: string;
 
   @Field(() => String, { nullable: true })
-  city?: string;
+  state!: string;
 
   @Field(() => String, { nullable: true })
-  state?: string;
+  postalCode!: string;
 
   @Field(() => String, { nullable: true })
-  postalCode?: string;
-
-  @Field(() => String, { nullable: true })
-  country?: string;
+  country!: string;
 }
 
 @InputType()

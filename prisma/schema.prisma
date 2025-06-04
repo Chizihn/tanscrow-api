@@ -354,7 +354,9 @@ model AuditLog {
 
 enum AccountType {
   USER
+  MANAGER
   ADMIN
+  SUPERADMIN
 }
 
 enum ProviderType {
@@ -481,6 +483,7 @@ enum TokenType {
 }
 
 enum AuditAction {
+  INITIATE
   CREATE
   UPDATE
   DELETE
@@ -495,6 +498,10 @@ enum AuditAction {
   TRANSFER
   WITHDRAW
   DEPOSIT
+  INFO
+  SKIP
+  WARNING
+  ERROR
 }
 
 enum AuditCategory {
@@ -507,4 +514,9 @@ enum AuditCategory {
   VERIFICATION
   DISPUTE
   PAYMENT
+}
+
+enum SearchUserType {
+  GENERAL
+  TRANSACTION
 }

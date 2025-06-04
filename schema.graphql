@@ -48,15 +48,81 @@ type Address {
   updatedAt: DateTimeISO!
 }
 
+type AdminDashboardStats {
+  activeDisputes: Int!
+  totalTransactionVolume: Float!
+  totalTransactions: Int!
+  totalUsers: Int!
+}
+
+"""Types of audit actions that can be performed"""
+enum AuditAction {
+  APPROVE
+  BLOCK
+  CREATE
+  DELETE
+  DEPOSIT
+  ERROR
+  FAILED_LOGIN
+  INFO
+  INITIATE
+  LOGIN
+  LOGOUT
+  REJECT
+  SKIP
+  TRANSFER
+  UNBLOCK
+  UPDATE
+  VERIFY
+  WARNING
+  WITHDRAW
+}
+
+"""Categories of audit logs"""
+enum AuditCategory {
+  ADMIN
+  DISPUTE
+  PAYMENT
+  SECURITY
+  SYSTEM
+  TRANSACTION
+  USER
+  VERIFICATION
+  WALLET
+}
+
+type AuditLog {
+  action: AuditAction!
+  category: AuditCategory!
+  createdAt: DateTimeISO!
+  details: JSONObject
+  entityId: String
+  entityType: String!
+  id: String!
+  ipAddress: String
+  userAgent: String
+  userId: String
+}
+
+type AuditLogConnection {
+  hasMore: Boolean!
+  items: [AuditLog!]!
+  total: Int!
+}
+
+input AuditLogFilter {
+  action: AuditAction
+  category: AuditCategory
+  endDate: DateTimeISO
+  entityId: String
+  entityType: String
+  startDate: DateTimeISO
+  userId: String
+}
+
 type AuthResponse {
   token: String!
   user: User!
-}
-
-type Bank {
-  active: Boolean!
-  code: String!
-  name: String!
 }
 
 type BankWithdrawal {
@@ -111,8 +177,15 @@ input CreateTransactionInput {
   type: TransactionType!
 }
 
-input CreateWalletInput {
-  currency: PaymentCurrency!
+type CurrencyBreakdown {
+  currency: String!
+  totalAmount: Float!
+  transactionCount: Int!
+}
+
+type DateRangeOutput {
+  endDate: DateTimeISO!
+  startDate: DateTimeISO!
 }
 
 """
@@ -153,6 +226,20 @@ type DisputeEvidence {
   submittedBy: String!
 }
 
+input DisputeManagementInput {
+  disputeId: ID!
+  resolution: String!
+  status: String!
+}
+
+type DisputeReport {
+  averageResolutionTime: Float!
+  disputeRate: Float!
+  pendingDisputes: Int!
+  resolvedDisputes: Int!
+  totalDisputes: Int!
+}
+
 """Status of a dispute"""
 enum DisputeStatus {
   CLOSED
@@ -182,6 +269,14 @@ enum EscrowStatus {
   PARTIALLY_REFUNDED
   REFUNDED
   RELEASED
+}
+
+type FinancialSummary {
+  averageTransactionValue: Float!
+  currencyBreakdown: [CurrencyBreakdown!]!
+  totalEscrowFees: Float!
+  totalProcessingFees: Float!
+  totalRevenue: Float!
 }
 
 input ForgotPasswordInput {
@@ -217,7 +312,6 @@ type Mutation {
   confirmWithdrawal(id: ID!): BankWithdrawal!
   createReview(input: CreateReviewInput!): Review!
   createTransaction(input: CreateTransactionInput!): Transaction!
-  createWallet(input: CreateWalletInput!): Wallet!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
   fundWallet(input: FundWalletInput!): PaymentInitiationResponse!
   markAllNotificationsRead: Boolean!
@@ -229,7 +323,7 @@ type Mutation {
   requestRefund(input: RequestRefundInput!): Transaction!
   resendVerificationEmail(input: ResendVerificationEmailInput!): Boolean!
   resetPassword(input: ResetPasswordInput!): Boolean!
-  resolveDispute(input: ResolveDisputeInput!): Dispute!
+  resolveDispute(input: DisputeManagementInput!): Boolean!
 
   """Review and update the status of a verification document"""
   reviewVerificationDocument(input: ReviewVerificationDocumentInput!): VerificationDocument!
@@ -248,6 +342,8 @@ type Mutation {
 
   """Update user's profile image URL"""
   updateProfileImage(profileImageUrl: String!): User!
+  updateSystemConfig(input: SystemConfigInput!): SystemConfig!
+  updateUserManagement(input: UserManagementInput!): User!
   verifyEmail(input: VerifyEmailInput!): Boolean!
   verifyPhoneOtp(input: VerifyPhoneOtpInput!): Boolean!
   withdrawToNigerianBank(input: WithdrawToNigerianBankInput!): BankWithdrawal!
@@ -347,10 +443,17 @@ enum ProviderType {
 
 type Query {
   dispute(id: String!): Dispute!
+  disputeReport(dateRange: ReportDateRangeInput!): DisputeReport!
   disputes: [Dispute!]!
-  getNigerianBanks: [Bank!]!
+  financialSummary(dateRange: ReportDateRangeInput!): FinancialSummary!
+  getAdminDashboardStats: AdminDashboardStats!
+  getAllUsers(limit: Float, page: Float): [User!]!
+  getAuditLogs(filter: AuditLogFilter, skip: Int, take: Int): AuditLogConnection!
+  getBankWithdrawals: [BankWithdrawal!]!
+  getFilteredTransactions(filter: TransactionFilterInput!): [Transaction!]!
   getPaymentDetails(reference: String!): JSONObject
   getSellerReviews(sellerId: String!): [Review!]!
+  getSystemConfigs: [SystemConfig!]!
 
   """Get current user"""
   me: User
@@ -363,20 +466,24 @@ type Query {
   pendingVerificationDocuments: [VerificationDocument!]!
   resolveAccountDetails(input: AccountResolveInput!): AccountDetails!
 
-  """Find user by email adress or phone number"""
-  searchUser(input: String!): User
+  """Find user by email address or phone number"""
+  searchUser(input: SearchUserInput!): User
   transaction(id: ID!): Transaction!
+  transactionReport(dateRange: ReportDateRangeInput!): TransactionReport!
   transactions: [Transaction!]!
   unreadNotifications: [Notification!]!
 
   """Find user by id"""
   user(id: String!): User
+  userActivityReport(dateRange: ReportDateRangeInput!): UserActivityReport!
+  userDashboardSummary(dateRange: ReportDateRangeInput): UserDashboardSummary!
 
   """Fetch reviews given by user"""
   userReviewsGiven: [Review!]!
 
   """Fetch reviews received by user"""
   userReviewsReceived: [Review!]!
+  userWalletSummary: UserWalletSummary!
 
   """Fetch all users"""
   users: [User!]!
@@ -385,8 +492,31 @@ type Query {
   walletTransactions: [WalletTransaction!]!
 }
 
+type RecentTransaction {
+  amount: Float!
+  counterparty: String!
+  createdAt: DateTimeISO!
+  id: String!
+  role: String!
+  status: TransactionStatus!
+  title: String!
+}
+
+type RecentWalletTransaction {
+  amount: Float!
+  createdAt: DateTimeISO!
+  description: String
+  id: String!
+  type: String!
+}
+
 input ReleaseEscrowInput {
   transactionId: ID!
+}
+
+input ReportDateRangeInput {
+  endDate: DateTimeISO!
+  startDate: DateTimeISO!
 }
 
 input RequestPhoneOtpInput {
@@ -407,12 +537,6 @@ input ResetPasswordInput {
   token: String!
 }
 
-input ResolveDisputeInput {
-  disputeId: String!
-  resolution: DisputeStatus!
-  resolutionDetails: String!
-}
-
 type Review {
   comment: String
   createdAt: DateTimeISO!
@@ -427,6 +551,17 @@ input ReviewVerificationDocumentInput {
   documentId: String!
   rejectionReason: String
   status: VerificationStatus!
+}
+
+input SearchUserInput {
+  query: String!
+  searchType: SearchUserType!
+}
+
+"""The type for using the search user query"""
+enum SearchUserType {
+  GENERAL
+  TRANSACTION
 }
 
 input SigninWithEmailInput {
@@ -461,6 +596,21 @@ input SubmitVerificationDocumentInput {
   documentUrl: String!
 }
 
+type SystemConfig {
+  createdAt: DateTimeISO!
+  description: String
+  id: ID!
+  key: String!
+  updatedAt: DateTimeISO!
+  value: String!
+}
+
+input SystemConfigInput {
+  description: String
+  key: String!
+  value: String!
+}
+
 type Transaction {
   actualDeliveryDate: DateTimeISO
   amount: Float!
@@ -490,6 +640,15 @@ type Transaction {
   updatedAt: DateTimeISO!
 }
 
+input TransactionFilterInput {
+  endDate: DateTimeISO
+  escrowStatus: String
+  limit: Int
+  page: Int
+  startDate: DateTimeISO
+  status: String
+}
+
 type TransactionLog {
   action: String!
   createdAt: DateTimeISO!
@@ -499,6 +658,17 @@ type TransactionLog {
   performedBy: String!
   status: TransactionStatus!
   transaction: Transaction!
+}
+
+type TransactionReport {
+  averageTransactionAmount: Float!
+  canceledTransactions: Int!
+  completedTransactions: Int!
+  disputedTransactions: Int!
+  statusBreakdown: [TransactionStatusCount!]!
+  totalAmount: Float!
+  totalEscrowFees: Float!
+  totalTransactions: Int!
 }
 
 """The status of a transaction"""
@@ -512,6 +682,11 @@ enum TransactionStatus {
   PENDING
   REFUNDED
   REFUND_REQUESTED
+}
+
+type TransactionStatusCount {
+  count: Int!
+  status: TransactionStatus!
 }
 
 """The type of transaction"""
@@ -528,21 +703,19 @@ input UpdateDeliveryInput {
 }
 
 input UpdateProfileInput {
-  addressId: String
   city: String
   country: String
   firstName: String
   lastName: String
   phoneNumber: String
   postalCode: String
-  profileImageUrl: String
   state: String
   street: String
 }
 
 type User {
   accountType: AccountType!
-  address: Address
+  address: Address!
   addressId: String
   createdAt: DateTimeISO!
   email: String
@@ -554,6 +727,46 @@ type User {
   providers: [Provider!]!
   updatedAt: DateTimeISO!
   verified: Boolean!
+}
+
+type UserActivityReport {
+  activeUsers: Int!
+  averageTransactionsPerUser: Float!
+  newUsers: Int!
+  totalTransactions: Int!
+  totalUsers: Int!
+}
+
+type UserDashboardSummary {
+  activeTransactions: Int!
+  averageTransactionAmount: Float!
+  canceledTransactions: Int!
+  completedTransactions: Int!
+  dateRange: DateRangeOutput!
+  disputedTransactions: Int!
+  recentTransactions: [RecentTransaction!]!
+  statusBreakdown: [TransactionStatusCount!]!
+  totalAmount: Float!
+  totalAmountAsBuyer: Float!
+  totalAmountAsSeller: Float!
+  totalFeesPaid: Float!
+  totalTransactions: Int!
+  transactionsAsBuyer: Int!
+  transactionsAsSeller: Int!
+}
+
+input UserManagementInput {
+  accountType: String
+  userId: ID!
+  verified: Boolean
+}
+
+type UserWalletSummary {
+  availableBalance: Float!
+  currency: String!
+  escrowBalance: Float!
+  recentTransactions: [RecentWalletTransaction!]!
+  totalBalance: Float!
 }
 
 type VerificationDocument {

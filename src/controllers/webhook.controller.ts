@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PaymentService } from "../services/payment.service";
 import logger from "../utils/logger";
 import { PaymentGateway } from "@prisma/client";
+import { prisma } from "../config/db.config";
 
 // Custom interface for request with rawBody
 interface WebhookRequest extends Request {
@@ -96,15 +97,17 @@ export const webhookController = {
    * @param req - Express request
    * @param res - Express response
    */
-  verifyPayment: async (req: Request, res: Response): Promise<void> => {
+  verifyPayment: async (req: Request, res: Response): Promise<Response> => {
     try {
       const gatewayParam = req.params.gateway.toUpperCase();
 
       // Validate gateway parameter
       if (gatewayParam !== "PAYSTACK" && gatewayParam !== "FLUTTERWAVE") {
-        return res.redirect(
-          `${process.env.FRONTEND_URL}/payment/failed?reason=invalid_gateway`
-        );
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid payment gateway. Supported gateways: PAYSTACK, FLUTTERWAVE",
+        });
       }
 
       const gateway = gatewayParam as PaymentGateway;
@@ -116,26 +119,130 @@ export const webhookController = {
           : (req.query.tx_ref as string);
 
       if (!reference) {
-        return res.redirect(
-          `${process.env.FRONTEND_URL}/payment/failed?reason=missing_reference`
-        );
+        return res.status(400).json({
+          success: false,
+          message: "Payment reference is required",
+        });
       }
 
-      // Verify the payment
-      const success = await paymentService.verifyPayment(reference, gateway);
+      // Verify the payment (returns boolean)
+      const isVerified = await paymentService.verifyPayment(reference, gateway);
 
-      if (success) {
-        return res.redirect(`${process.env.FRONTEND_URL}/payment/success`);
+      if (isVerified) {
+        // Since verification was successful, get payment details from database
+        const payment = await prisma.payment.findFirst({
+          where: { gatewayReference: reference },
+          include: {
+            transactions: { take: 1 },
+            walletTransactions: { take: 1 },
+          },
+        });
+
+        if (!payment) {
+          return res.status(404).json({
+            success: false,
+            message: "Payment record not found in database",
+          });
+        }
+
+        // Get additional details from gateway if needed
+        let gatewayDetails = null;
+        try {
+          if (gateway === "PAYSTACK") {
+            gatewayDetails = await webhookController.getPaystackTransactionDetails(
+              reference
+            );
+          } else if (gateway === "FLUTTERWAVE") {
+            gatewayDetails = await webhookController.getFlutterwaveTransactionDetails(
+              reference
+            );
+          }
+        } catch (error) {
+          logger.warn("Failed to fetch gateway details:", error);
+        }
+
+        return res.json({
+          success: true,
+          message: "Payment verified successfully",
+          data: {
+            reference: reference,
+            amount: gatewayDetails?.amount || (payment!.amount!.toNumber() ?? 0),
+            currency: gatewayDetails?.currency || (payment!.paymentCurrency ?? "NGN"),
+            status: "success",
+            gateway: gateway.toLowerCase(),
+          },
+        });
       } else {
-        return res.redirect(
-          `${process.env.FRONTEND_URL}/payment/failed?reason=verification_failed`
-        );
+        return res.status(400).json({
+          success: false,
+          message: "Payment verification failed",
+          data: {
+            reference: reference,
+            gateway: gateway.toLowerCase(),
+          },
+        });
       }
     } catch (error) {
       logger.error("Payment verification error:", error);
-      return res.redirect(
-        `${process.env.FRONTEND_URL}/payment/failed?reason=server_error`
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error during payment verification",
+      });
+    }
+  },
+
+  // Helper methods to get transaction details from gateways
+  async getPaystackTransactionDetails(reference: string) {
+    try {
+      const response = await fetch(
+        `https://api.paystack.co/transaction/verify/${reference}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
+
+      const data = await response.json();
+      if (data.status && data.data) {
+        return {
+          amount: data.data.amount / 100, // Convert from kobo
+          currency: data.data.currency,
+          status: data.data.status,
+        };
+      }
+      return null;
+    } catch (error) {
+      logger.warn("Failed to get Paystack details:", error);
+      return null;
+    }
+  },
+
+  async getFlutterwaveTransactionDetails(reference: string) {
+    try {
+      const response = await fetch(
+        `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${reference}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.status === "success" && data.data) {
+        return {
+          amount: data.data.amount,
+          currency: data.data.currency,
+          status: data.data.status,
+        };
+      }
+      return null;
+    } catch (error) {
+      logger.warn("Failed to get Flutterwave details:", error);
+      return null;
     }
   },
 };

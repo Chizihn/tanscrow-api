@@ -37,7 +37,7 @@ export class AuditLogService {
         },
       });
     } else {
-      // Create log without user relation
+      // Create log without user relation - action is already in baseData
       await this.prisma.auditLog.create({
         data: baseData,
       });

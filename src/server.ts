@@ -55,14 +55,10 @@ const startServer = async () => {
       res.redirect("/graphql");
     });
 
-    // Apply Apollo middleware to Express
     app.use(
       "/graphql",
       cors<cors.CorsRequest>({
-        origin:
-          config.NODE_ENV === "development"
-            ? "http://localhost:3000"
-            : "https://tanscrow.vercel.app",
+        origin: [config.APP_URL, config.NGROK_SERVER],
         credentials: true,
       }),
       express.json(),
@@ -74,9 +70,7 @@ const startServer = async () => {
     // Use httpServer.listen instead of app.listen
     httpServer.listen(config.PORT, () => {
       console.log(`🚀 Server running on port ${config.PORT}`);
-      console.log(
-        `🚀 GraphQL endpoint: http://localhost:${config.PORT}/graphql`
-      );
+      console.log(`🚀 GraphQL endpoint: ${config.GRAPHQL_ENDPOINT}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);

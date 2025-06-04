@@ -46,7 +46,7 @@ src/
    ```
    DATABASE_URL="postgresql://username:password@localhost:5432/tanscrow"
    JWT_SECRET="your-secret-key"
-   PORT=4000
+   PORT=5000
    ```
 
 3. Generate Prisma client:
@@ -89,4 +89,5 @@ To authenticate GraphQL requests, include the JWT token in the Authorization hea
 ```
 Authorization: Bearer YOUR_JWT_TOKEN
 ```
+
 # tanscrow-api

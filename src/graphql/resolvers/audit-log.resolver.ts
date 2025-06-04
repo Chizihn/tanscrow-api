@@ -14,7 +14,7 @@ import { AuditLog } from "../types/audit-log.type";
 import { AuditAction, AuditCategory } from "@prisma/client";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
-import { isAdmin } from "../middleware/auth.middleware";
+import { isAdmin, isAuthenticated } from "../middleware/auth.middleware";
 
 @InputType()
 class AuditLogFilter {
@@ -54,7 +54,7 @@ class AuditLogConnection {
 
 @Resolver()
 export class AuditLogResolver {
-  @UseMiddleware(isAdmin)
+  @UseMiddleware(isAuthenticated)
   @Query(() => AuditLogConnection)
   async getAuditLogs(
     @Ctx() {}: GraphQLContext,
