@@ -35,6 +35,8 @@ model User {
   AuditLog              AuditLog[]
   bankWithdrawals       BankWithdrawal[]
   notificationPreferences NotificationPreferences?
+  chats    Chat[]   @relation("userChats")
+  messages Message[]
 
 
   @@index([email])
@@ -352,6 +354,40 @@ model AuditLog {
   @@index([createdAt])
 }
 
+model Chat {
+  id            String    @id @default(cuid())
+  participants  User[]    @relation("userChats")
+  messages      Message[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Message {
+  id         String     @id @default(cuid())
+  chat       Chat       @relation(fields: [chatId], references: [id])
+  chatId     String
+  sender     User       @relation(fields: [senderId], references: [id])
+  senderId   String
+  content    String?
+ attachments Attachment[] 
+  createdAt  DateTime   @default(now())
+
+  @@index([chatId])
+  @@index([senderId])
+
+}
+
+model Attachment {
+  id          String   @id @default(cuid())
+  url         String
+  fileType    String   
+  fileName    String
+  message     Message  @relation(fields: [messageId], references: [id])
+  messageId   String   @unique
+
+  @@index([messageId])
+
+}
 enum AccountType {
   USER
   MANAGER

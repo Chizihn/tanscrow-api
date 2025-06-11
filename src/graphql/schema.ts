@@ -1,4 +1,5 @@
 import { buildSchema } from "type-graphql";
+import { PubSub } from "graphql-subscriptions";
 import { AuthResolver } from "./resolvers/auth.resolver";
 import { UserResolver } from "./resolvers/user.resolver";
 import { TransactionResolver } from "./resolvers/transaction.resolver";
@@ -13,6 +14,9 @@ import { AuditLogResolver } from "./resolvers/audit-log.resolver";
 import { AdminResolver } from "./resolvers/admin.resolver";
 import { ReportResolver } from "./resolvers/report.resolver";
 import { DashboardResolver } from "./resolvers/dashboard.resolver";
+import { ChatSubscriptionResolver } from "./resolvers/chat.resolver";
+
+const pubSub = new PubSub() as any;
 
 export const createSchema = async () => {
   return buildSchema({
@@ -31,7 +35,9 @@ export const createSchema = async () => {
       AdminResolver,
       ReportResolver,
       DashboardResolver,
+      ChatSubscriptionResolver,
     ],
+    pubSub,
     validate: false,
     emitSchemaFile: true,
   });

@@ -6,13 +6,12 @@ import {
   registerEnumType,
 } from "type-graphql";
 import {
-  User as PrismaUser,
   AccountType,
   ProviderType,
   Provider as PrismaProvider,
-  Address as PrismaAdress,
   SearchUserType,
 } from "@prisma/client";
+import { Review } from "./review.type";
 
 // Register the AccountType enum for GraphQL
 registerEnumType(AccountType, {
@@ -120,14 +119,17 @@ export class User {
   @Field(() => String, { nullable: true })
   addressId?: string | null;
 
-  @Field(() => [Provider])
+  @Field(() => [Provider], { nullable: true })
   providers?: Provider[];
 
   @Field(() => Address, { nullable: true })
   address?: Address | null;
 
-  // @Field(() => [VerificationDocument])
-  // verificationDocuments?: VerificationDocument[];
+  @Field(() => [Review], { nullable: true })
+  reviewsReceived?: Review[];
+
+  @Field(() => [Review], { nullable: true })
+  reviewsGiven?: Review[];
 }
 
 @InputType()

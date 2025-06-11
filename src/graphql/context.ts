@@ -2,6 +2,10 @@ import { Request } from "express";
 import { GraphQLContext } from "./types/context.type";
 import { getUser } from "../middleware/auth.middleware";
 
+export interface Context {
+  token?: string;
+}
+
 export const createContext = async ({
   req,
 }: {

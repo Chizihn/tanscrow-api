@@ -40,6 +40,7 @@ export class UserResolver {
       include: {
         address: true,
         providers: true,
+        reviewsGiven: true,
       },
     });
 
@@ -48,7 +49,16 @@ export class UserResolver {
 
   @Query(() => User, { nullable: true, description: "Find user by id" })
   async user(@Arg("id") id: string): Promise<User | null> {
-    return prisma.user.findUnique({ where: { id } });
+    return prisma.user.findUnique({
+      where: { id },
+      include: {
+        reviewsReceived: true,
+        providers: false,
+        address: false,
+        verificationDocuments: false,
+        verificationTokens: false,
+      },
+    });
   }
 
   @Query(() => [User], { description: "Fetch all users" })

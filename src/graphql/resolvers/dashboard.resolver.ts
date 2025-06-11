@@ -67,7 +67,7 @@ export class DashboardResolver {
     ).length;
 
     const disputedTransactions = userTransactions.filter(
-      (t) => t.status === TransactionStatus.REFUNDED
+      (t) => t.status === TransactionStatus.DISPUTED
     ).length;
 
     const canceledTransactions = userTransactions.filter(

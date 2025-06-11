@@ -1,10 +1,6 @@
 import rateLimit from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
-import {
-  redisClient,
-  rateLimitConfig,
-  redisStoreConfig,
-} from "../config/rate-limit.config";
+import { rateLimitConfig, redisStoreConfig } from "../config/rate-limit.config";
 
 // Create rate limiters for different endpoints
 export const rateLimiters = {

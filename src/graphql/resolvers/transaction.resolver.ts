@@ -80,62 +80,6 @@ export class TransactionResolver {
     return transaction;
   }
 
-  // @Mutation(() => Transaction)
-  // @UseMiddleware(isAuthenticated)
-  // async createTransaction(
-  //   @Arg("input") input: CreateTransactionInput,
-  //   @Ctx() { user }: GraphQLContext
-  // ): Promise<Transaction> {
-  //   if (input.buyerId === input.sellerId) {
-  //     throw new Error("You cannot create a transaction with yourself!");
-  //   }
-
-  //   //Calculate escrow fee
-  //   const escrowFee = calculateEscrowFee(input.amount);
-  //   // Convert escrowFee to Decimal and add to input.amount
-  //   const totalAmount = new Decimal(input.amount).add(escrowFee);
-
-  //   const transaction = prisma.transaction.create({
-  //     data: {
-  //       ...input,
-  //       transactionCode: generateTransactionCode(),
-  //       // buyerId: user?.id as string,
-  //       escrowFee,
-  //       totalAmount,
-  //       paymentCurrency: PaymentCurrency.NGN,
-  //       status: TransactionStatus.PENDING,
-  //       escrowStatus: EscrowStatus.NOT_FUNDED,
-  //       logs: {
-  //         create: {
-  //           action: "CREATE",
-  //           status: TransactionStatus.PENDING,
-  //           escrowStatus: EscrowStatus.NOT_FUNDED,
-  //           performedBy: input.buyerId as string,
-  //           description: "Transaction created",
-  //         },
-  //       },
-  //     },
-  //     include: {
-  //       buyer: true,
-  //       seller: true,
-  //       payment: true,
-  //       logs: true,
-  //     },
-  //   });
-
-  //   await sendNotification({
-  //     userId: input.sellerId,
-  //     entityType: "Transaction",
-  //     entityId: (await transaction).id,
-  //     type: "TRANSACTION",
-  //     title: "New Transaction Created",
-  //           message: `A new transaction (${(await transaction).transactionCode}) has been created. Please review the details.`,
-
-  //     })
-
-  //   return transaction;
-  // }
-
   @Mutation(() => Transaction)
   @UseMiddleware(isAuthenticated)
   async createTransaction(
