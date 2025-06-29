@@ -41,6 +41,8 @@ model User {
 
   @@index([email])
   @@index([phoneNumber])
+
+  @@map("User")
 }
 
 model Provider {
@@ -360,6 +362,8 @@ model Chat {
   messages      Message[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  
+  @@map("Chat")
 }
 
 model Message {
@@ -369,11 +373,16 @@ model Message {
   sender     User       @relation(fields: [senderId], references: [id])
   senderId   String
   content    String?
+  isRead            Boolean          @default(false)
+
  attachments Attachment[] 
   createdAt  DateTime   @default(now())
 
   @@index([chatId])
   @@index([senderId])
+  @@index([isRead])
+  @@map("Message")
+
 
 }
 
@@ -386,6 +395,7 @@ model Attachment {
   messageId   String   @unique
 
   @@index([messageId])
+  @@map("Attachment")
 
 }
 enum AccountType {
@@ -555,4 +565,18 @@ enum AuditCategory {
 enum SearchUserType {
   GENERAL
   TRANSACTION
+}
+
+model Notification {
+  id                String           @id @default(uuid())
+  userId            String
+  title             String
+  message           String
+  type              NotificationType
+  isRead            Boolean          @default(false)
+  relatedEntityId   String?
+  relatedEntityType String?
+  createdAt         DateTime         @default(now())
+  
+  user              User             @relation(fields: [userId], references: [id])
 }

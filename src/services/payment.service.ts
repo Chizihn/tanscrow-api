@@ -256,12 +256,14 @@ export class PaymentService {
     email,
     gateway,
     existingReference = null,
+    platform = "WEB",
   }: {
     transactionId: string;
     totalAmount: number;
     email: string;
     gateway: PaymentGateway;
     existingReference?: string | null;
+    platform?: string;
   }): Promise<PaymentInitiationResponse> {
     try {
       console.log(
@@ -298,7 +300,8 @@ export class PaymentService {
           response = await this.initiatePaystackPayment(
             reference,
             totalAmount,
-            email
+            email,
+            platform
           );
           break;
 
@@ -1209,51 +1212,124 @@ export class PaymentService {
   /**
    * Initialize Paystack payment and get redirect URL
    */
-  private async initiatePaystackPayment(
-    reference: string,
-    amount: number,
-    email: string
-  ): Promise<PaymentInitiationResponse> {
-    try {
-      if (!this.paystackSecretKey) {
-        throw new Error("Paystack secret key not configured");
-      }
+  // private async initiatePaystackPayment(
+  //   reference: string,
+  //   amount: number,
+  //   email: string,
+  //   platform: string
+  // ): Promise<PaymentInitiationResponse> {
+  //   try {
+  //     if (!this.paystackSecretKey) {
+  //       throw new Error("Paystack secret key not configured");
+  //     }
 
-      const response = await axios.post(
-        `${this.paystackBaseUrl}/transaction/initialize`,
-        {
-          email,
-          amount: amount * 100, // Convert to kobo
-          reference,
-          callback_url: `${config.APP_URL}/payment/verify/paystack`,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${this.paystackSecretKey}`,
-            "Content-Type": "application/json",
-          },
+  //     logger.info(`Initiating Paystack payment for ${email} with amount ${amount} with ${platform}`);
+  
+  //     const response = await axios.post(
+  //       `${this.paystackBaseUrl}/transaction/initialize`,
+  //       {
+  //         email,
+  //         amount: amount * 100, // Convert to kobo
+  //         reference,
+  //         callback_url: platform === "MOBILE" ? config.APP_URL_MOBILE : `${config.APP_URL}/payment/verify/paystack`,
+  //       },
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${this.paystackSecretKey}`,
+  //           "Content-Type": "application/json",
+  //         },
+  //       }
+  //     );
+
+  //     if (response.data.status) {
+  //       logger.info(`Paystack payment initiated successfully for ${email} with amount ${amount} with ${platform}`);
+  //       logger.info(`Paystack payment redirect URL: ${response.data.data.authorization_url}`);
+  //       return {
+  //         success: true,
+  //         redirectUrl: response.data.data.authorization_url,
+  //         reference,
+  //       };
+  //     }
+
+  //     throw new Error("Failed to initialize Paystack payment");
+  //   } catch (error) {
+  //     logger.error("Paystack payment initiation error:", error);
+  //     return {
+  //       success: false,
+  //       error: `Failed to initiate Paystack payment: ${
+  //         error instanceof Error ? error.message : String(error)
+  //       }`,
+  //     };
+  //   }
+  // }
+  // Updated payment service method
+private async initiatePaystackPayment(
+  reference: string,
+  amount: number,
+  email: string,
+  platform: string
+): Promise<PaymentInitiationResponse> {
+  try {
+    if (!this.paystackSecretKey) {
+      throw new Error("Paystack secret key not configured");
+    }
+
+    logger.info(`Initiating Paystack payment for ${email} with amount ${amount} with ${platform}`);
+
+    // For mobile, use deep link scheme instead of web callback
+    const callbackUrl = platform === "MOBILE" 
+      ? "tanscrow://payment-callback" 
+      : `${config.APP_URL}/payment/verify/paystack`;
+
+    const response = await axios.post(
+      `${this.paystackBaseUrl}/transaction/initialize`,
+      {
+        email,
+        amount: amount * 100, // Convert to kobo
+        reference,
+        callback_url: callbackUrl,
+        // Add these for better mobile experience
+        channels: ["card", "bank", "ussd", "qr", "mobile_money", "bank_transfer"],
+        metadata: {
+          platform,
+          custom_fields: [
+            {
+              display_name: "Platform",
+              variable_name: "platform",
+              value: platform
+            }
+          ]
         }
-      );
-
-      if (response.data.status) {
-        return {
-          success: true,
-          redirectUrl: response.data.data.authorization_url,
-          reference,
-        };
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.paystackSecretKey}`,
+          "Content-Type": "application/json",
+        },
       }
+    );
 
-      throw new Error("Failed to initialize Paystack payment");
-    } catch (error) {
-      logger.error("Paystack payment initiation error:", error);
+    if (response.data.status) {
+      logger.info(`Paystack payment initiated successfully for ${email}`);
+      logger.info(`Paystack payment redirect URL: ${response.data.data.authorization_url}`);
       return {
-        success: false,
-        error: `Failed to initiate Paystack payment: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        success: true,
+        redirectUrl: response.data.data.authorization_url,
+        reference,
       };
     }
+
+    throw new Error("Failed to initialize Paystack payment");
+  } catch (error) {
+    logger.error("Paystack payment initiation error:", error);
+    return {
+      success: false,
+      error: `Failed to initiate Paystack payment: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    };
   }
+}
 
   /**
    * Initialize Flutterwave payment and get redirect URL

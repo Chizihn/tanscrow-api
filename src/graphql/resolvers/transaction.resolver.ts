@@ -20,6 +20,7 @@ import {
   PaymentCurrency,
   WalletTransactionType,
   WalletTransactionStatus,
+  AccountType,
 } from "@prisma/client";
 import { generateTransactionCode } from "../../utils/transaction";
 import { calculateEscrowFee } from "../../utils/fees";
@@ -69,14 +70,19 @@ export class TransactionResolver {
       },
     });
 
+    const allowedRoles = [AccountType.ADMIN, AccountType.MANAGER];
+    const hasAccess = user?.accountType && allowedRoles.includes(user.accountType as any);
+    
     if (!transaction) {
       throw new Error("Transaction not found");
     }
-
-    if (transaction.buyerId !== user?.id && transaction.sellerId !== user?.id) {
+    
+    // Allow access if user is transaction party OR has admin/manager role
+    const isTransactionParty = transaction.buyerId === user?.id || transaction.sellerId === user?.id;
+    
+    if (!isTransactionParty && !hasAccess) {
       throw new Error("Not authorized to view this transaction");
     }
-
     return transaction;
   }
 

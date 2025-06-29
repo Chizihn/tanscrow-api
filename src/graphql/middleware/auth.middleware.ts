@@ -49,6 +49,16 @@ export const isDocumentVerified: MiddlewareFn<GraphQLContext> = async (
   return next();
 };
 
+export const isManager: MiddlewareFn<GraphQLContext> = async (
+  { context },
+  next
+) => {
+  if (!context.user || context.user.accountType !== AccountType.MANAGER) {
+    throw new Error("Not authorized. You are not an admin!");
+  }
+  return next();
+};
+
 export const isAdmin: MiddlewareFn<GraphQLContext> = async (
   { context },
   next

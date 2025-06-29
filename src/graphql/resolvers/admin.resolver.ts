@@ -14,31 +14,38 @@ import {
   DisputeManagementInput,
   SystemConfigInput,
   SystemConfig,
+  DisputeFilterInput,
+  WithdrawalFilterInput,
 } from "../types/admin.type";
 import { User } from "../types/user.type";
 import { Transaction } from "../types/transaction.type";
-import { PrismaClient } from "@prisma/client";
-import { Prisma } from "@prisma/client";
+import { AccountType, DisputeStatus, Prisma } from "@prisma/client";
+import { Dispute } from "../types/dispute.type";
+import { WalletTransaction } from "../types/wallet.type";
+import { prisma } from "../../config/db.config";
 
 @Resolver()
 export class AdminResolver {
-  constructor(private prisma: PrismaClient) {}
 
   @Query(() => AdminDashboardStats)
   @UseMiddleware(isAdmin)
   async getAdminDashboardStats(): Promise<AdminDashboardStats> {
     const [totalUsers, totalTransactions, activeDisputes, transactions] =
       await Promise.all([
-        this.prisma.user.count(),
-        this.prisma.transaction.count(),
-        this.prisma.dispute.count({
+        prisma.user.count({
+          where: {
+            accountType: AccountType.USER,
+          },
+        }),
+        prisma.transaction.count(),
+        prisma.dispute.count({
           where: {
             status: {
-              in: ["OPENED", "IN_REVIEW"],
+              in: [DisputeStatus.OPENED , DisputeStatus.IN_REVIEW],
             },
           },
         }),
-        this.prisma.transaction.findMany({
+        prisma.transaction.findMany({
           select: {
             amount: true,
           },
@@ -65,21 +72,30 @@ export class AdminResolver {
     @Arg("page", () => Number, { nullable: true }) page: number = 1,
     @Arg("limit", () => Number, { nullable: true }) limit: number = 10
   ): Promise<User[]> {
-    return this.prisma.user.findMany({
-      skip: (page - 1) * limit,
-      take: limit,
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(100, Math.max(1, limit));
+  
+    const users = await prisma.user.findMany({
+      where: {
+        accountType: AccountType.USER,
+      },
+      skip: (safePage - 1) * safeLimit,
+      take: safeLimit,
       orderBy: {
         createdAt: "desc",
       },
     });
+  
+    return users;
   }
+  
 
   @Mutation(() => User)
   @UseMiddleware(isAdmin)
   async updateUserManagement(
     @Arg("input") input: UserManagementInput
   ): Promise<User> {
-    return this.prisma.user.update({
+    return prisma.user.update({
       where: { id: input.userId },
       data: {
         verified: input.verified,
@@ -116,7 +132,7 @@ export class AdminResolver {
       };
     }
 
-    return this.prisma.transaction.findMany({
+    return prisma.transaction.findMany({
       where,
       skip: ((filter.page || 1) - 1) * (filter.limit || 10),
       take: filter.limit || 10,
@@ -132,12 +148,83 @@ export class AdminResolver {
     });
   }
 
+  @Query(() => [Dispute])
+  @UseMiddleware(isAdmin)
+  async getFilteredDisputes(
+    @Arg("filter") filter: DisputeFilterInput
+  ): Promise<Dispute[]> {
+    const where: Prisma.DisputeWhereInput = {};
+
+    if (filter.status) {
+      where.status = filter.status as any;
+    }
+
+    if (filter.startDate) {
+      where.createdAt = {
+        gte: filter.startDate,
+      };
+    }
+
+    if (filter.endDate) {
+      where.createdAt = {
+        ...(where.createdAt as Date),
+        lte: filter.endDate,
+      };
+    }
+
+    return prisma.dispute.findMany({
+      where,
+      skip: ((filter.page || 1) - 1) * (filter.limit || 10),
+      take: filter.limit || 10,
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  }
+
+  @Query(() => [WalletTransaction])
+  @UseMiddleware(isAdmin)
+  async getFilteredWithdrawals(
+    @Arg("filter") filter: WithdrawalFilterInput
+  ): Promise<WalletTransaction[]> {
+    const where: Prisma.WalletTransactionWhereInput = {};
+
+    if (filter.status) {
+      where.status = filter.status as any;
+    }
+
+    if (filter.startDate) {
+      where.createdAt = {
+        gte: filter.startDate,
+      };
+    }
+
+    if (filter.endDate) {
+      where.createdAt = {
+        ...(where.createdAt as Date),
+        lte: filter.endDate,
+      };
+    }
+
+    return prisma.walletTransaction.findMany({
+      where,
+      skip: ((filter.page || 1) - 1) * (filter.limit || 10),
+      include: {
+        wallet: true,
+      },
+      take: filter.limit || 10,
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  }
+
   @Mutation(() => Boolean)
   @UseMiddleware(isAdmin)
   async resolveDispute(
     @Arg("input") input: DisputeManagementInput
   ): Promise<boolean> {
-    await this.prisma.dispute.update({
+    await prisma.dispute.update({
       where: { id: input.disputeId },
       data: {
         resolution: input.resolution,
@@ -154,7 +241,7 @@ export class AdminResolver {
   async updateSystemConfig(
     @Arg("input") input: SystemConfigInput
   ): Promise<SystemConfig> {
-    return this.prisma.systemSetting.upsert({
+    return prisma.systemSetting.upsert({
       where: { key: input.key },
       update: {
         value: input.value,
@@ -171,6 +258,6 @@ export class AdminResolver {
   @Query(() => [SystemConfig])
   @UseMiddleware(isAdmin)
   async getSystemConfigs(): Promise<SystemConfig[]> {
-    return this.prisma.systemSetting.findMany();
+    return prisma.systemSetting.findMany();
   }
 }

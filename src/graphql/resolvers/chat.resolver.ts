@@ -30,6 +30,64 @@ const SUBSCRIPTION_TOPICS = {
 export class ChatSubscriptionResolver {
   constructor(private pubSub: PubSubEngine = new GraphQLPubSub()) {}
 
+  @Mutation(() => Boolean)
+  async markChatAsRead(
+    @Arg("chatId") chatId: string,
+    @Ctx() context: GraphQLContext
+  ): Promise<boolean> {
+    try {
+      if (!context.user?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      // Get all unread messages in the chat
+      const unreadMessages = await prisma.message.findMany({
+        where: {
+          chatId,
+          isRead: false,
+        },
+      });
+
+      if (unreadMessages.length === 0) {
+        return true; // No unread messages to mark
+      }
+
+      // Update all unread messages to read
+      await prisma.message.updateMany({
+        where: {
+          chatId,
+          isRead: false,
+        },
+        data: {
+          isRead: true,
+        },
+      });
+
+      // Get updated chat with messages
+      const updatedChat = await prisma.chat.findUnique({
+        where: { id: chatId },
+        include: {
+          messages: true,
+        },
+      });
+
+      if (!updatedChat) {
+        throw new Error("Chat not found");
+      }
+
+      // Publish subscription event
+      await this.pubSub.publish(
+        `${SUBSCRIPTION_TOPICS.CHAT_UPDATED}_${context.user.id}`,
+        { chatUpdates: { chat: updatedChat, type: "CHAT_UPDATED" } }
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Error marking chat as read:", error);
+      throw error;
+    }
+  }
+
   // Subscriptions
   @Subscription(() => MessageSubscriptionPayload, {
     topics: ({ args }) => `${SUBSCRIPTION_TOPICS.NEW_MESSAGE}_${args.chatId}`,
@@ -133,16 +191,71 @@ export class ChatSubscriptionResolver {
 
   @Mutation(() => Chat)
   async createChat(
-    @Arg("participantIds", () => [String]) participantIds: string[],
+    @Arg("participantId", () => String) participantId: string,
     @Ctx() { user }: GraphQLContext
   ): Promise<Chat> {
-    // Include the current user in participants
-    const allParticipantIds = [...new Set([user?.id, ...participantIds])];
-
+    if (!user?.id) {
+      throw new Error("User not authenticated");
+    }
+  
+    if (user.id === participantId) {
+      throw new Error("Cannot create chat with yourself");
+    }
+  
+    // Check if participant exists
+    const participant = await prisma.user.findUnique({
+      where: { id: participantId },
+    });
+  
+    if (!participant) {
+      throw new Error("Participant not found");
+    }
+  
+    // Check if chat already exists between these two users
+    const existingChat = await prisma.chat.findFirst({
+      where: {
+        AND: [
+          {
+            participants: {
+              some: { id: user.id },
+            },
+          },
+          {
+            participants: {
+              some: { id: participantId },
+            },
+          },
+          {
+            participants: {
+              every: {
+                id: { in: [user.id, participantId] },
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        participants: true,
+        messages: {
+          include: {
+            sender: true,
+            attachments: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+  
+    // If chat exists, throw error with chat ID
+    if (existingChat) {
+      throw new Error(`Chat already exists with ID: ${existingChat.id}`);
+    }
+  
+    // Create new chat with both participants
     const chat = await prisma.chat.create({
       data: {
         participants: {
-          connect: allParticipantIds.map((id) => ({ id })),
+          connect: [{ id: user.id }, { id: participantId }],
         },
       },
       include: {
@@ -156,18 +269,19 @@ export class ChatSubscriptionResolver {
         },
       },
     });
-
-    // Notify all participants about the new chat
-    for (const participantId of allParticipantIds) {
+  
+    // Notify both participants about the new chat
+    const participantIds = [user.id, participantId];
+    for (const id of participantIds) {
       await this.pubSub.publish(
-        `${SUBSCRIPTION_TOPICS.CHAT_UPDATED}_${participantId}`,
+        `${SUBSCRIPTION_TOPICS.CHAT_UPDATED}_${id}`,
         {
           chat,
           type: "CHAT_CREATED",
         }
       );
     }
-
+  
     return chat;
   }
 
@@ -240,27 +354,39 @@ export class ChatSubscriptionResolver {
 
   // Queries
   @Query(() => [Chat])
-  async myChats(@Ctx() { user }: GraphQLContext): Promise<Chat[]> {
-    return prisma.chat.findMany({
-      where: {
-        participants: {
-          some: { id: user?.id as string },
-        },
+async myChats(@Ctx() { user }: GraphQLContext): Promise<Chat[]> {
+  const chats = await prisma.chat.findMany({
+    where: {
+      participants: {
+        some: { id: user?.id as string },
       },
-      include: {
-        participants: true,
-        messages: {
-          include: {
-            sender: true,
-            attachments: true,
-          },
-          orderBy: { createdAt: "desc" },
-          take: 1, // Get only the latest message for chat list
+    },
+    include: {
+      participants: true,
+      messages: {
+        include: {
+          sender: true,
+          attachments: true,
         },
+        orderBy: { createdAt: "desc" },
+        take: 1, // Get only the latest message for chat list
       },
-      orderBy: { updatedAt: "desc" },
-    });
-  }
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  // Map the results to include lastMessage
+  return chats.map(chat => ({
+    ...chat,
+    lastMessage: chat.messages.length > 0 ? {
+      content: chat.messages[0].content,
+      sender: chat.messages[0].sender,
+      isRead: chat.messages[0].isRead,
+      createdAt: chat.messages[0].createdAt,
+    } : null,
+    lastMessageAt: chat.messages.length > 0 ? chat.messages[0].createdAt : null,
+  }));
+}
 
   @Query(() => Chat, { nullable: true })
   async chat(

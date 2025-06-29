@@ -7,13 +7,13 @@ export class Attachment {
   @Field(() => ID)
   id?: string;
 
-  @Field()
+  @Field(() => String, { nullable: true })
   url?: string;
 
-  @Field()
+  @Field(() => String, { nullable: true })
   fileType?: string;
 
-  @Field()
+  @Field(() => String, { nullable: true })
   fileName?: string;
 }
 
@@ -31,12 +31,21 @@ export class Message {
   @Field(() => String, { nullable: true })
   content?: string | null;
 
-  @Field(() => [Attachment])
+  @Field(() => [Attachment], { nullable: true })
   attachments?: Attachment[];
 
-  @Field(() => Boolean)
-  isRead?: boolean;
+  @Field(() => [User], { nullable: true })
+  readBy?: User[];
 
   @Field(() => Date)
   createdAt?: Date;
+
+  @Field(() => Date)
+  updatedAt?: Date;
+
+  @Field(() => String)
+  chatId?: string;
+
+  @Field(() => String)
+  senderId?: string;
 }

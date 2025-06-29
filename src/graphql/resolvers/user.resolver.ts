@@ -6,7 +6,12 @@ import {
   UseMiddleware,
   Mutation,
 } from "type-graphql";
-import { SearchUserInput, User } from "../types/user.type";
+import {
+  GetUsersInput,
+  SearchUserInput,
+  User,
+  UsersResponse,
+} from "../types/user.type";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { isAdmin, isAuthenticated } from "../middleware/auth.middleware";
@@ -61,10 +66,119 @@ export class UserResolver {
     });
   }
 
-  @Query(() => [User], { description: "Fetch all users" })
+  @Query(() => UsersResponse, {
+    description: "Fetch users with pagination and filters",
+  })
   @UseMiddleware(isAdmin)
-  async users(): Promise<User[]> {
-    return prisma.user.findMany();
+  async users(
+    @Arg("input", () => GetUsersInput, { nullable: true }) input?: GetUsersInput
+  ): Promise<UsersResponse> {
+    const pagination = input?.pagination || {};
+    const filters = input?.filters || {};
+
+    const page = Math.max(1, pagination.page || 1);
+    const limit = Math.min(100, Math.max(1, pagination.limit || 10)); // Cap at 100
+    const skip = (page - 1) * limit;
+
+    const sortBy = pagination.sortBy || "createdAt";
+    const sortOrder = pagination.sortOrder || "desc";
+
+    // Build where clause
+    const where: any = {};
+
+    if (filters.email) {
+      where.email = { contains: filters.email, mode: "insensitive" };
+    }
+
+    if (filters.firstName) {
+      where.firstName = { contains: filters.firstName, mode: "insensitive" };
+    }
+
+    if (filters.lastName) {
+      where.lastName = { contains: filters.lastName, mode: "insensitive" };
+    }
+
+    if (filters.phoneNumber) {
+      where.phoneNumber = { contains: filters.phoneNumber };
+    }
+
+    if (filters.accountType) {
+      where.accountType = filters.accountType;
+    }
+
+    if (filters.verified !== undefined) {
+      where.verified = filters.verified;
+    }
+
+    // Address filters
+    if (filters.city || filters.state || filters.country) {
+      where.address = {};
+      if (filters.city) {
+        where.address.city = { contains: filters.city, mode: "insensitive" };
+      }
+      if (filters.state) {
+        where.address.state = { contains: filters.state, mode: "insensitive" };
+      }
+      if (filters.country) {
+        where.address.country = {
+          contains: filters.country,
+          mode: "insensitive",
+        };
+      }
+    }
+
+    // Date range filters
+    if (filters.createdAfter || filters.createdBefore) {
+      where.createdAt = {};
+      if (filters.createdAfter) {
+        where.createdAt.gte = filters.createdAfter;
+      }
+      if (filters.createdBefore) {
+        where.createdAt.lte = filters.createdBefore;
+      }
+    }
+
+    // Build orderBy
+    const orderBy: any = {};
+    if (sortBy === "name") {
+      orderBy.firstName = sortOrder;
+    } else if (sortBy === "address") {
+      orderBy.address = { city: sortOrder };
+    } else {
+      orderBy[sortBy] = sortOrder;
+    }
+
+    // Execute queries
+    const [users, totalCount] = await Promise.all([
+      prisma.user.findMany({
+        where: {
+          accountType: AccountType.USER,
+        },
+        skip,
+        take: limit,
+        orderBy,
+        include: {
+          address: true,
+          providers: true,
+          reviewsReceived: true,
+          reviewsGiven: true,
+        },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPreviousPage = page > 1;
+
+    return {
+      users,
+      totalCount,
+      totalPages,
+      currentPage: page,
+      hasNextPage,
+      hasPreviousPage,
+    };
   }
 
   // --- Mutations ---

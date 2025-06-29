@@ -58,10 +58,10 @@ type AdminDashboardStats {
 }
 
 type Attachment {
-  fileName: String!
-  fileType: String!
+  fileName: String
+  fileType: String
   id: ID!
-  url: String!
+  url: String
 }
 
 """Types of audit actions that can be performed"""
@@ -171,11 +171,10 @@ input ChangePasswordInput {
 type Chat {
   createdAt: DateTimeISO!
   id: ID!
-  lastMessageAt: DateTimeISO!
-  messages: [Message!]!
+  lastMessage: LastMessage
+  messages: [Message!]
+  participants: [User!]!
   updatedAt: DateTimeISO!
-  user1: User!
-  user2: User!
 }
 
 type ChatSubscriptionPayload {
@@ -251,6 +250,14 @@ type DisputeEvidence {
   submittedBy: String!
 }
 
+input DisputeFilterInput {
+  endDate: DateTimeISO
+  limit: Int
+  page: Int
+  startDate: DateTimeISO
+  status: DisputeStatus
+}
+
 input DisputeManagementInput {
   disputeId: ID!
   resolution: String!
@@ -312,6 +319,12 @@ input FundWalletInput {
   amount: Float!
   currency: PaymentCurrency!
   paymentGateway: PaymentGateway!
+  platform: String!
+}
+
+input GetUsersInput {
+  filters: UserFiltersInput
+  pagination: PaginationInput
 }
 
 """
@@ -319,14 +332,24 @@ The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](
 """
 scalar JSONObject
 
+type LastMessage {
+  content: String
+  createdAt: DateTimeISO
+  isRead: Boolean
+  sender: User
+}
+
 type Message {
-  attachments: [Attachment!]!
+  attachments: [Attachment!]
   chat: Chat!
+  chatId: String!
   content: String
   createdAt: DateTimeISO!
   id: ID!
-  isRead: Boolean!
+  readBy: [User!]
   sender: User!
+  senderId: String!
+  updatedAt: DateTimeISO!
 }
 
 type MessageSubscriptionPayload {
@@ -351,13 +374,14 @@ type Mutation {
   changePassword(input: ChangePasswordInput!): User!
   confirmDelivery(transactionId: String!): Transaction!
   confirmWithdrawal(id: ID!): BankWithdrawal!
-  createChat(participantIds: [String!]!): Chat!
+  createChat(participantId: String!): Chat!
   createReview(input: CreateReviewInput!): Review!
   createTransaction(input: CreateTransactionInput!): Transaction!
   deleteMessage(messageId: String!): Boolean!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
   fundWallet(input: FundWalletInput!): PaymentInitiationResponse!
   markAllNotificationsRead: Boolean!
+  markChatAsRead(chatId: String!): Boolean!
   markMessageAsRead(messageId: String!): Boolean!
   markNotificationRead(notificationId: String!): Notification!
   openDispute(input: OpenDisputeInput!): Dispute!
@@ -424,6 +448,13 @@ input OpenDisputeInput {
   description: String!
   reason: String!
   transactionId: String!
+}
+
+input PaginationInput {
+  limit: Int = 10
+  page: Int = 1
+  sortBy: String
+  sortOrder: String = "desc"
 }
 
 type Payment {
@@ -497,7 +528,9 @@ type Query {
   getAllUsers(limit: Float, page: Float): [User!]!
   getAuditLogs(filter: AuditLogFilter, skip: Int, take: Int): AuditLogConnection!
   getBankWithdrawals: [BankWithdrawal!]!
+  getFilteredDisputes(filter: DisputeFilterInput!): [Dispute!]!
   getFilteredTransactions(filter: TransactionFilterInput!): [Transaction!]!
+  getFilteredWithdrawals(filter: WithdrawalFilterInput!): [WalletTransaction!]!
   getPaymentDetails(reference: String!): JSONObject
   getSellerReviews(sellerId: String!): [Review!]!
   getSystemConfigs: [SystemConfig!]!
@@ -533,8 +566,8 @@ type Query {
   userReviewsReceived: [Review!]!
   userWalletSummary: UserWalletSummary!
 
-  """Fetch all users"""
-  users: [User!]!
+  """Fetch users with pagination and filters"""
+  users(input: GetUsersInput): UsersResponse!
   verifyPayment(gateway: PaymentGateway!, reference: String!): Boolean!
   wallet: Wallet!
   walletTransactions: [WalletTransaction!]!
@@ -817,6 +850,20 @@ type UserDashboardSummary {
   transactionsAsSeller: Int!
 }
 
+input UserFiltersInput {
+  accountType: AccountType
+  city: String
+  country: String
+  createdAfter: DateTimeISO
+  createdBefore: DateTimeISO
+  email: String
+  firstName: String
+  lastName: String
+  phoneNumber: String
+  state: String
+  verified: Boolean
+}
+
 input UserManagementInput {
   accountType: String
   userId: ID!
@@ -829,6 +876,15 @@ type UserWalletSummary {
   escrowBalance: Float!
   recentTransactions: [RecentWalletTransaction!]!
   totalBalance: Float!
+}
+
+type UsersResponse {
+  currentPage: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  totalCount: Int!
+  totalPages: Int!
+  users: [User!]!
 }
 
 type VerificationDocument {
@@ -870,6 +926,7 @@ type Wallet {
   isActive: Boolean!
   transactions: [WalletTransaction!]!
   updatedAt: DateTimeISO!
+  user: User!
   userId: ID!
 }
 
@@ -925,4 +982,12 @@ input WithdrawToNigerianBankInput {
   bankCode: String!
   bankName: String!
   currency: PaymentCurrency!
+}
+
+input WithdrawalFilterInput {
+  endDate: DateTimeISO
+  limit: Int
+  page: Int
+  startDate: DateTimeISO
+  status: DisputeStatus
 }

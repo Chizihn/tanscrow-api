@@ -13,6 +13,7 @@ import {
   ResolveDisputeInput,
 } from "../types/dispute.type";
 import {
+  AccountType,
   DisputeStatus,
   NotificationType,
   TransactionStatus,
@@ -47,45 +48,50 @@ export class DisputeResolver {
     });
   }
 
-  @Query(() => Dispute)
-  @UseMiddleware(isAuthenticated)
-  async dispute(
-    @Arg("id") id: string,
-    @Ctx() { user }: GraphQLContext
-  ): Promise<Dispute> {
-    const dispute = await prisma.dispute.findUnique({
-      where: { id },
-      include: {
-        transaction: {
-          include: {
-            buyer: true,
-            seller: true,
-          },
+@Query(() => Dispute)
+@UseMiddleware(isAuthenticated)
+async dispute(
+  @Arg("id") id: string,
+  @Ctx() { user }: GraphQLContext
+): Promise<Dispute> {
+  const dispute = await prisma.dispute.findUnique({
+    where: { id },
+    include: {
+      transaction: {
+        include: {
+          buyer: true,
+          seller: true,
         },
-        initiator: true,
-        moderator: true,
-        evidence: true,
       },
-    });
+      initiator: true,
+      moderator: true,
+      evidence: true,
+    },
+  });
 
-    if (!dispute) {
-      throw new Error("Dispute not found");
-    }
-
-    const hasAccess = [
-      dispute.initiatorId,
-      dispute.moderatorId,
-      dispute.transaction.buyerId,
-      dispute.transaction.sellerId,
-    ].includes(user?.id as string);
-
-    if (!hasAccess) {
-      throw new Error("Unauthorized access to dispute");
-    }
-
-    return dispute;
+  if (!dispute) {
+    throw new Error("Dispute not found");
   }
 
+  // Check if user is admin or manager (full access)
+  const allowedRoles = [AccountType.ADMIN, AccountType.MANAGER];
+  const isAuthorizedRole = user?.accountType && allowedRoles.includes(user.accountType as any);
+
+  // Check if user is directly involved in the dispute
+  const hasDirectAccess = [
+    dispute.initiatorId,
+    dispute.moderatorId,
+    dispute.transaction.buyerId,
+    dispute.transaction.sellerId,
+  ].includes(user?.id as string);
+
+  // User must either have an authorized role OR be directly involved
+  if (!isAuthorizedRole && !hasDirectAccess) {
+    throw new Error("Unauthorized access to dispute");
+  }
+
+  return dispute;
+}
   @Mutation(() => Dispute)
   @UseMiddleware(isAuthenticated)
   async openDispute(

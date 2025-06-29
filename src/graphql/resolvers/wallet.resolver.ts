@@ -101,6 +101,7 @@ export class WalletResolver {
             paymentGateway: input.paymentGateway,
             gatewayReference,
             status: PaymentStatus.PENDING,
+            
           },
         });
 
@@ -113,7 +114,7 @@ export class WalletResolver {
             type: WalletTransactionType.DEPOSIT,
             reference: gatewayReference,
             status: WalletTransactionStatus.PENDING,
-            description: "Wallet funding via payment gateway",
+            description: `Funding via ${input.paymentGateway}`,
             balanceBefore: wallet.balance,
             balanceAfter: wallet.balance,
           },
@@ -130,6 +131,7 @@ export class WalletResolver {
         email: userRecord.email,
         gateway: input.paymentGateway,
         existingReference: gatewayReference,
+        platform: input.platform,
       });
 
       // Clean up if payment initiation fails

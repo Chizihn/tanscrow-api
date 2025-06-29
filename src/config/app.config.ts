@@ -29,6 +29,7 @@ interface Config {
   JWT_SECRET_EXPIRES: string;
   NODE_ENV: string;
   APP_URL: string;
+  APP_URL_MOBILE: string;
   SMTP: SMTP;
   PAYSTACK: {
     SECRET_KEY: string;
@@ -50,6 +51,8 @@ const config: Config = {
     process.env.NODE_ENV === "development"
       ? "http://localhost:3000"
       : (process.env.APP_URL as string),
+  // For mobile, use deep link scheme instead of HTTP URL  
+  APP_URL_MOBILE: "tanscrow://payment-callback",
   SMTP: {
     HOST: process.env.SMTP_HOST || "",
     PORT: process.env.SMTP_PORT || "",
