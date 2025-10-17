@@ -9,6 +9,19 @@ interface SMTP {
   FROM: string;
 }
 
+interface AWS {
+  REGION: string;
+  ACCESS_KEY_ID: string;
+  SECRET_ACCESS_KEY: string;
+  BUCKET_NAME: string;
+}
+
+interface Redis {
+  HOST: string;
+  PORT: string | number;
+  PASSWORD: string;
+}
+
 interface Config {
   DATABASE_URL: string;
   PORT: string;
@@ -16,12 +29,16 @@ interface Config {
   JWT_SECRET_EXPIRES: string;
   NODE_ENV: string;
   APP_URL: string;
+  APP_URL_MOBILE: string;
   SMTP: SMTP;
   PAYSTACK: {
     SECRET_KEY: string;
   };
+  AWS: AWS;
   LOG_LEVEL: string;
+  REDIS: Redis;
   GRAPHQL_ENDPOINT: string;
+  SUBSCRIPTION_ENDPOINT: string;
 }
 
 const config: Config = {
@@ -34,6 +51,8 @@ const config: Config = {
     process.env.NODE_ENV === "development"
       ? "http://localhost:3000"
       : (process.env.APP_URL as string),
+  // For mobile, use deep link scheme instead of HTTP URL  
+  APP_URL_MOBILE: "tanscrow://payment-callback",
   SMTP: {
     HOST: process.env.SMTP_HOST || "",
     PORT: process.env.SMTP_PORT || "",
@@ -44,10 +63,25 @@ const config: Config = {
   PAYSTACK: {
     SECRET_KEY: process.env.PAYSTACK_SECRET_KEY || "",
   },
+  AWS: {
+    REGION: process.env.AWS_REGION || "us-east-1",
+    ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "",
+    SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "",
+    BUCKET_NAME: process.env.AWS_BUCKET_NAME || "",
+  },
   LOG_LEVEL: process.env.LOG_LEVEL as string,
+  REDIS: {
+    HOST: process.env.REDIS_HOST || "localhost",
+    PORT: process.env.REDIS_PORT || 6379,
+    PASSWORD: process.env.REDIS_PASSWORD || "",
+  },
   GRAPHQL_ENDPOINT:
     process.env.NODE_ENV === "development"
       ? `http://localhost:${process.env.PORT}/graphql`
+      : `${process.env.API_URL}/graphql`,
+  SUBSCRIPTION_ENDPOINT:
+    process.env.NODE_ENV === "development"
+      ? `ws://localhost:${process.env.PORT}/graphql`
       : `${process.env.API_URL}/graphql`,
 };
 

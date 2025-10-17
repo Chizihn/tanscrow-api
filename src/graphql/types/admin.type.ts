@@ -1,3 +1,4 @@
+import { DisputeStatus, WalletTransactionStatus } from "@prisma/client";
 import { Field, ID, ObjectType, InputType, Int, Float } from "type-graphql";
 
 @ObjectType()
@@ -34,6 +35,42 @@ export class TransactionFilterInput {
 
   @Field(() => String, { nullable: true })
   escrowStatus?: string;
+
+  @Field(() => Date, { nullable: true })
+  startDate?: Date;
+
+  @Field(() => Date, { nullable: true })
+  endDate?: Date;
+
+  @Field(() => Int, { nullable: true })
+  page?: number;
+
+  @Field(() => Int, { nullable: true })
+  limit?: number;
+}
+
+@InputType()
+export class DisputeFilterInput {
+  @Field(() => DisputeStatus, { nullable: true })
+  status?: DisputeStatus;
+
+  @Field(() => Date, { nullable: true })
+  startDate?: Date;
+
+  @Field(() => Date, { nullable: true })
+  endDate?: Date;
+
+  @Field(() => Int, { nullable: true })
+  page?: number;
+
+  @Field(() => Int, { nullable: true })
+  limit?: number;
+}
+
+@InputType()
+export class WithdrawalFilterInput {
+  @Field(() => DisputeStatus, { nullable: true })
+  status?: WalletTransactionStatus;
 
   @Field(() => Date, { nullable: true })
   startDate?: Date;

@@ -56,8 +56,8 @@ export class Wallet {
   @Field(() => Date)
   updatedAt?: Date;
 
-  // @Field(() => User)
-  // user?: User;
+  @Field(() => User)
+  user?: User;
 
   @Field(() => [WalletTransaction])
   transactions?: WalletTransaction[];

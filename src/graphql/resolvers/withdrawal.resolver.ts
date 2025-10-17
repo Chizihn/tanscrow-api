@@ -9,7 +9,11 @@ import {
 } from "type-graphql";
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
-import { isAuthenticated } from "../middleware/auth.middleware";
+import {
+  isAdmin,
+  isAuthenticated,
+  isDocumentVerified,
+} from "../middleware/auth.middleware";
 import {
   BankWithdrawal,
   WithdrawToNigerianBankInput,
@@ -64,7 +68,7 @@ export class WithdrawalResolver {
   }
 
   @Mutation(() => BankWithdrawal)
-  @UseMiddleware(isAuthenticated, isVerified)
+  @UseMiddleware(isAuthenticated, isVerified, isDocumentVerified)
   async withdrawToNigerianBank(
     @Arg("input") input: WithdrawToNigerianBankInput,
     @Ctx() { user }: GraphQLContext
@@ -144,7 +148,7 @@ export class WithdrawalResolver {
   }
 
   @Mutation(() => BankWithdrawal)
-  @UseMiddleware(isAuthenticated, isVerified)
+  @UseMiddleware(isAdmin)
   async confirmWithdrawal(
     @Arg("id", () => ID) id: string,
     @Ctx() { user }: GraphQLContext

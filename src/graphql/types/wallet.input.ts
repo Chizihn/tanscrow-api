@@ -11,4 +11,7 @@ export class FundWalletInput {
 
   @Field(() => PaymentGateway)
   paymentGateway!: PaymentGateway;
+
+  @Field(() => String)
+  platform?: string;
 }

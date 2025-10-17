@@ -2,17 +2,17 @@ import {
   Field,
   ID,
   InputType,
+  Int,
   ObjectType,
   registerEnumType,
 } from "type-graphql";
 import {
-  User as PrismaUser,
   AccountType,
   ProviderType,
   Provider as PrismaProvider,
-  Address as PrismaAdress,
   SearchUserType,
 } from "@prisma/client";
+import { Review } from "./review.type";
 
 // Register the AccountType enum for GraphQL
 registerEnumType(AccountType, {
@@ -120,14 +120,17 @@ export class User {
   @Field(() => String, { nullable: true })
   addressId?: string | null;
 
-  @Field(() => [Provider])
+  @Field(() => [Provider], { nullable: true })
   providers?: Provider[];
 
   @Field(() => Address, { nullable: true })
   address?: Address | null;
 
-  // @Field(() => [VerificationDocument])
-  // verificationDocuments?: VerificationDocument[];
+  @Field(() => [Review], { nullable: true })
+  reviewsReceived?: Review[];
+
+  @Field(() => [Review], { nullable: true })
+  reviewsGiven?: Review[];
 }
 
 @InputType()
@@ -137,4 +140,86 @@ export class SearchUserInput {
 
   @Field(() => SearchUserType)
   searchType!: SearchUserType;
+}
+
+
+@InputType()
+export class UserFiltersInput {
+  @Field(() => String, { nullable: true })
+  email?: string;
+
+  @Field(() => String, { nullable: true })
+  firstName?: string;
+
+  @Field(() => String, { nullable: true })
+  lastName?: string;
+
+  @Field(() => String, { nullable: true })
+  phoneNumber?: string;
+
+  @Field(() => AccountType, { nullable: true })
+  accountType?: AccountType;
+
+  @Field(() => Boolean, { nullable: true })
+  verified?: boolean;
+
+  @Field(() => String, { nullable: true })
+  city?: string;
+
+  @Field(() => String, { nullable: true })
+  state?: string;
+
+  @Field(() => String, { nullable: true })
+  country?: string;
+
+  @Field(() => Date, { nullable: true })
+  createdAfter?: Date;
+
+  @Field(() => Date, { nullable: true })
+  createdBefore?: Date;
+}
+
+@InputType()
+export class PaginationInput {
+  @Field(() => Int, { nullable: true, defaultValue: 1 })
+  page?: number;
+
+  @Field(() => Int, { nullable: true, defaultValue: 10 })
+  limit?: number;
+
+  @Field(() => String, { nullable: true })
+  sortBy?: string; // e.g., "createdAt", "firstName", "lastName"
+
+  @Field(() => String, { nullable: true, defaultValue: "desc" })
+  sortOrder?: "asc" | "desc";
+}
+
+@InputType()
+export class GetUsersInput {
+  @Field(() => PaginationInput, { nullable: true })
+  pagination?: PaginationInput;
+
+  @Field(() => UserFiltersInput, { nullable: true })
+  filters?: UserFiltersInput;
+}
+
+@ObjectType()
+export class UsersResponse {
+  @Field(() => [User])
+  users!: User[];
+
+  @Field(() => Int)
+  totalCount!: number;
+
+  @Field(() => Int)
+  totalPages!: number;
+
+  @Field(() => Int)
+  currentPage!: number;
+
+  @Field(() => Boolean)
+  hasNextPage!: boolean;
+
+  @Field(() => Boolean)
+  hasPreviousPage!: boolean;
 }

@@ -15,6 +15,7 @@ import {
   ReviewVerificationDocumentInput,
 } from "../types/verification.type";
 import { sendNotification } from "../../services/notification.service";
+import { VerificationStatus } from "@prisma/client";
 
 @Resolver(() => VerificationDocument)
 export class VerificationResolver {
@@ -35,7 +36,7 @@ export class VerificationResolver {
   @UseMiddleware(isAdmin)
   async pendingVerificationDocuments() {
     return prisma.verificationDocument.findMany({
-      where: { verificationStatus: "PENDING" },
+      where: { verificationStatus: VerificationStatus.PENDING },
       orderBy: { submittedAt: "asc" },
     });
   }
@@ -52,7 +53,7 @@ export class VerificationResolver {
       data: {
         ...input,
         userId: user?.id as string,
-        verificationStatus: "PENDING",
+        verificationStatus: VerificationStatus.PENDING,
       },
     });
 
@@ -73,11 +74,11 @@ export class VerificationResolver {
       data: {
         verificationStatus: status,
         rejectionReason,
-        verifiedAt: status === "APPROVED" ? new Date() : null,
+        verifiedAt: status === VerificationStatus.APPROVED ? new Date() : null,
       },
     });
 
-    if (status === "APPROVED") {
+    if (status === VerificationStatus.APPROVED) {
       await prisma.user.update({
         where: { id: document.userId },
         data: { verified: true },

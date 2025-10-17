@@ -5,6 +5,7 @@ import requestLogger from "./middleware/logger.middleware";
 import errorMiddleware from "./middleware/error.middleware";
 import { webhookRoutes } from "./routes/webhook.routes";
 import config from "./config/app.config";
+import { UploadRoutes } from "./routes/upload.routes";
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use(
 );
 
 app.use("/webhooks", webhookRoutes);
+app.use("/upload", UploadRoutes);
 
 app.use(limiter);
 // app.use(requestLogger);

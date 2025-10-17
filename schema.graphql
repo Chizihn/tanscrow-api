@@ -57,6 +57,13 @@ type AdminDashboardStats {
   totalUsers: Int!
 }
 
+type Attachment {
+  fileName: String
+  fileType: String
+  id: ID!
+  url: String
+}
+
 """Types of audit actions that can be performed"""
 enum AuditAction {
   APPROVE
@@ -161,6 +168,21 @@ input ChangePasswordInput {
   newPassword: String!
 }
 
+type Chat {
+  createdAt: DateTimeISO!
+  id: ID!
+  lastMessage: LastMessage
+  messages: [Message!]
+  participants: [User!]!
+  updatedAt: DateTimeISO!
+}
+
+type ChatSubscriptionPayload {
+  chat: Chat!
+  otherUser: User!
+  type: String!
+}
+
 input CreateReviewInput {
   comment: String
   rating: Int!
@@ -228,6 +250,14 @@ type DisputeEvidence {
   submittedBy: String!
 }
 
+input DisputeFilterInput {
+  endDate: DateTimeISO
+  limit: Int
+  page: Int
+  startDate: DateTimeISO
+  status: DisputeStatus
+}
+
 input DisputeManagementInput {
   disputeId: ID!
   resolution: String!
@@ -289,12 +319,44 @@ input FundWalletInput {
   amount: Float!
   currency: PaymentCurrency!
   paymentGateway: PaymentGateway!
+  platform: String!
+}
+
+input GetUsersInput {
+  filters: UserFiltersInput
+  pagination: PaginationInput
 }
 
 """
 The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
 """
 scalar JSONObject
+
+type LastMessage {
+  content: String
+  createdAt: DateTimeISO
+  isRead: Boolean
+  sender: User
+}
+
+type Message {
+  attachments: [Attachment!]
+  chat: Chat!
+  chatId: String!
+  content: String
+  createdAt: DateTimeISO!
+  id: ID!
+  readBy: [User!]
+  sender: User!
+  senderId: String!
+  updatedAt: DateTimeISO!
+}
+
+type MessageSubscriptionPayload {
+  message: Message!
+  recipient: User!
+  type: String!
+}
 
 type Mutation {
   addDisputeEvidence(input: AddDisputeEvidenceInput!): Dispute!
@@ -312,11 +374,15 @@ type Mutation {
   changePassword(input: ChangePasswordInput!): User!
   confirmDelivery(transactionId: String!): Transaction!
   confirmWithdrawal(id: ID!): BankWithdrawal!
+  createChat(participantId: String!): Chat!
   createReview(input: CreateReviewInput!): Review!
   createTransaction(input: CreateTransactionInput!): Transaction!
+  deleteMessage(messageId: String!): Boolean!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
   fundWallet(input: FundWalletInput!): PaymentInitiationResponse!
   markAllNotificationsRead: Boolean!
+  markChatAsRead(chatId: String!): Boolean!
+  markMessageAsRead(messageId: String!): Boolean!
   markNotificationRead(notificationId: String!): Notification!
   openDispute(input: OpenDisputeInput!): Dispute!
   payForTransaction(transactionId: String!): Transaction!
@@ -329,6 +395,8 @@ type Mutation {
 
   """Review and update the status of a verification document"""
   reviewVerificationDocument(input: ReviewVerificationDocumentInput!): VerificationDocument!
+  sendMessage(attachmentIds: [String!]! = [], chatId: String!, content: String): Message!
+  setTyping(chatId: String!, isTyping: Boolean!): Boolean!
   signinWithEmail(input: SigninWithEmailInput!): AuthResponse!
   signinWithPhone(input: SigninWithPhoneInput!): AuthResponse!
   signupWithEmail(input: SignupWithEmailInput!): AuthResponse!
@@ -380,6 +448,13 @@ input OpenDisputeInput {
   description: String!
   reason: String!
   transactionId: String!
+}
+
+input PaginationInput {
+  limit: Int = 10
+  page: Int = 1
+  sortBy: String
+  sortOrder: String = "desc"
 }
 
 type Payment {
@@ -444,6 +519,7 @@ enum ProviderType {
 }
 
 type Query {
+  chat(id: String!): Chat
   dispute(id: String!): Dispute!
   disputeReport(dateRange: ReportDateRangeInput!): DisputeReport!
   disputes: [Dispute!]!
@@ -452,13 +528,16 @@ type Query {
   getAllUsers(limit: Float, page: Float): [User!]!
   getAuditLogs(filter: AuditLogFilter, skip: Int, take: Int): AuditLogConnection!
   getBankWithdrawals: [BankWithdrawal!]!
+  getFilteredDisputes(filter: DisputeFilterInput!): [Dispute!]!
   getFilteredTransactions(filter: TransactionFilterInput!): [Transaction!]!
+  getFilteredWithdrawals(filter: WithdrawalFilterInput!): [WalletTransaction!]!
   getPaymentDetails(reference: String!): JSONObject
   getSellerReviews(sellerId: String!): [Review!]!
   getSystemConfigs: [SystemConfig!]!
 
   """Get current user"""
   me: User
+  myChats: [Chat!]!
 
   """Retrieve verification documents for the authenticated user"""
   myVerificationDocuments: [VerificationDocument!]!
@@ -487,8 +566,8 @@ type Query {
   userReviewsReceived: [Review!]!
   userWalletSummary: UserWalletSummary!
 
-  """Fetch all users"""
-  users: [User!]!
+  """Fetch users with pagination and filters"""
+  users(input: GetUsersInput): UsersResponse!
   verifyPayment(gateway: PaymentGateway!, reference: String!): Boolean!
   wallet: Wallet!
   walletTransactions: [WalletTransaction!]!
@@ -540,12 +619,12 @@ input ResetPasswordInput {
 }
 
 type Review {
-  comment: String
+  comment: String!
   createdAt: DateTimeISO!
   id: ID!
-  rating: Int!
-  reviewerId: ID!
-  sellerId: ID!
+  rating: Float!
+  reviewer: User!
+  seller: User!
   updatedAt: DateTimeISO!
 }
 
@@ -596,6 +675,12 @@ input SubmitVerificationDocumentInput {
   documentNumber: String!
   documentType: DocumentType!
   documentUrl: String!
+}
+
+type Subscription {
+  chatUpdates: ChatSubscriptionPayload!
+  messageUpdates(chatId: String!): MessageSubscriptionPayload!
+  userTyping(chatId: String!): TypingPayload!
 }
 
 type SystemConfig {
@@ -697,6 +782,12 @@ enum TransactionType {
   SERVICE
 }
 
+type TypingPayload {
+  chatId: ID!
+  isTyping: Boolean!
+  user: User!
+}
+
 input UpdateDeliveryInput {
   deliveryMethod: DeliveryMethod!
   expectedDeliveryDate: DateTimeISO
@@ -726,7 +817,9 @@ type User {
   lastName: String!
   phoneNumber: String
   profileImageUrl: String
-  providers: [Provider!]!
+  providers: [Provider!]
+  reviewsGiven: [Review!]
+  reviewsReceived: [Review!]
   updatedAt: DateTimeISO!
   verified: Boolean!
 }
@@ -757,6 +850,20 @@ type UserDashboardSummary {
   transactionsAsSeller: Int!
 }
 
+input UserFiltersInput {
+  accountType: AccountType
+  city: String
+  country: String
+  createdAfter: DateTimeISO
+  createdBefore: DateTimeISO
+  email: String
+  firstName: String
+  lastName: String
+  phoneNumber: String
+  state: String
+  verified: Boolean
+}
+
 input UserManagementInput {
   accountType: String
   userId: ID!
@@ -769,6 +876,15 @@ type UserWalletSummary {
   escrowBalance: Float!
   recentTransactions: [RecentWalletTransaction!]!
   totalBalance: Float!
+}
+
+type UsersResponse {
+  currentPage: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  totalCount: Int!
+  totalPages: Int!
+  users: [User!]!
 }
 
 type VerificationDocument {
@@ -810,6 +926,7 @@ type Wallet {
   isActive: Boolean!
   transactions: [WalletTransaction!]!
   updatedAt: DateTimeISO!
+  user: User!
   userId: ID!
 }
 
@@ -865,4 +982,12 @@ input WithdrawToNigerianBankInput {
   bankCode: String!
   bankName: String!
   currency: PaymentCurrency!
+}
+
+input WithdrawalFilterInput {
+  endDate: DateTimeISO
+  limit: Int
+  page: Int
+  startDate: DateTimeISO
+  status: DisputeStatus
 }

@@ -101,6 +101,7 @@ export class WalletResolver {
             paymentGateway: input.paymentGateway,
             gatewayReference,
             status: PaymentStatus.PENDING,
+            
           },
         });
 
@@ -113,7 +114,7 @@ export class WalletResolver {
             type: WalletTransactionType.DEPOSIT,
             reference: gatewayReference,
             status: WalletTransactionStatus.PENDING,
-            description: "Wallet funding via payment gateway",
+            description: `Funding via ${input.paymentGateway}`,
             balanceBefore: wallet.balance,
             balanceAfter: wallet.balance,
           },
@@ -130,6 +131,7 @@ export class WalletResolver {
         email: userRecord.email,
         gateway: input.paymentGateway,
         existingReference: gatewayReference,
+        platform: input.platform,
       });
 
       // Clean up if payment initiation fails
@@ -252,119 +254,5 @@ export class WalletResolver {
 
       return transaction;
     });
-  }
-
-  /**
-   * Confirm wallet funding after successful payment
-   * This should be called by the payment service when payment is confirmed
-   */
-  async confirmWalletFunding(
-    paymentId: string,
-    gatewayResponse: any
-  ): Promise<void> {
-    try {
-      // Find the payment and associated wallet transaction
-      const payment = await prisma.payment.findUnique({
-        where: { id: paymentId },
-        include: {
-          walletTransactions: {
-            where: { status: WalletTransactionStatus.PENDING },
-            include: { wallet: true },
-          },
-        },
-      });
-
-      if (!payment || payment.walletTransactions.length === 0) {
-        throw new Error("Payment or wallet transaction not found");
-      }
-
-      const walletTransaction = payment.walletTransactions[0];
-      const wallet = walletTransaction.wallet;
-
-      // Update wallet balance and transaction status
-      await prisma.$transaction(async (tx) => {
-        // Update wallet balance
-        const newBalance = wallet.balance.plus(walletTransaction.amount);
-
-        await tx.wallet.update({
-          where: { id: wallet.id },
-          data: { balance: newBalance },
-        });
-
-        // Update wallet transaction status
-        await tx.walletTransaction.update({
-          where: { id: walletTransaction.id },
-          data: {
-            status: WalletTransactionStatus.COMPLETED,
-            balanceAfter: newBalance,
-          },
-        });
-
-        // Update payment status
-        await tx.payment.update({
-          where: { id: paymentId },
-          data: {
-            status: PaymentStatus.SUCCESSFUL,
-            gatewayResponse,
-          },
-        });
-      });
-
-      logger.info(`Wallet funding confirmed for payment ${paymentId}`);
-    } catch (error) {
-      logger.error("Error confirming wallet funding:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Handle failed wallet funding
-   */
-  async handleFailedWalletFunding(
-    paymentId: string,
-    gatewayResponse: any
-  ): Promise<void> {
-    try {
-      // Find the payment and associated wallet transaction
-      const payment = await prisma.payment.findUnique({
-        where: { id: paymentId },
-        include: {
-          walletTransactions: {
-            where: { status: WalletTransactionStatus.PENDING },
-          },
-        },
-      });
-
-      if (!payment || payment.walletTransactions.length === 0) {
-        throw new Error("Payment or wallet transaction not found");
-      }
-
-      const walletTransaction = payment.walletTransactions[0];
-
-      // Update transaction and payment status
-      await prisma.$transaction(async (tx) => {
-        // Mark wallet transaction as failed
-        await tx.walletTransaction.update({
-          where: { id: walletTransaction.id },
-          data: {
-            status: WalletTransactionStatus.FAILED,
-          },
-        });
-
-        // Update payment status
-        await tx.payment.update({
-          where: { id: paymentId },
-          data: {
-            status: PaymentStatus.FAILED,
-            gatewayResponse,
-          },
-        });
-      });
-
-      logger.info(`Wallet funding failed for payment ${paymentId}`);
-    } catch (error) {
-      logger.error("Error handling failed wallet funding:", error);
-      throw error;
-    }
   }
 }
