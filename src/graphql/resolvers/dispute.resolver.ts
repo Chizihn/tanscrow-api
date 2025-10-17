@@ -62,30 +62,30 @@ export class DisputeResolver {
     }));
   }
 
-@Query(() => Dispute)
-@UseMiddleware(isAuthenticated)
-async dispute(
-  @Arg("id") id: string,
-  @Ctx() { user }: GraphQLContext
-): Promise<Dispute> {
-  const dispute = await prisma.dispute.findUnique({
-    where: { id },
-    include: {
-      transaction: {
-        include: {
-          buyer: true,
-          seller: true,
+  @Query(() => Dispute)
+  @UseMiddleware(isAuthenticated)
+  async dispute(
+    @Arg("id") id: string,
+    @Ctx() { user }: GraphQLContext
+  ): Promise<Dispute> {
+    const dispute = await prisma.dispute.findUnique({
+      where: { id },
+      include: {
+        transaction: {
+          include: {
+            buyer: true,
+            seller: true,
+          },
         },
+        initiator: true,
+        moderator: true,
+        evidence: true,
       },
-      initiator: true,
-      moderator: true,
-      evidence: true,
-    },
-  });
+    });
 
-  if (!dispute) {
-    throw new Error("Dispute not found");
-  }
+    if (!dispute) {
+      throw new Error("Dispute not found");
+    }
 
     if (!dispute.transaction) {
       throw new Error("Transaction not found for this dispute");
@@ -118,8 +118,6 @@ async dispute(
     };
   }
 
-  return dispute;
-}
   @Mutation(() => Dispute)
   @UseMiddleware(isAuthenticated)
   async openDispute(
