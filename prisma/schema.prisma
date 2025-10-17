@@ -567,16 +567,3 @@ enum SearchUserType {
   TRANSACTION
 }
 
-model Notification {
-  id                String           @id @default(uuid())
-  userId            String
-  title             String
-  message           String
-  type              NotificationType
-  isRead            Boolean          @default(false)
-  relatedEntityId   String?
-  relatedEntityType String?
-  createdAt         DateTime         @default(now())
-  
-  user              User             @relation(fields: [userId], references: [id])
-}
