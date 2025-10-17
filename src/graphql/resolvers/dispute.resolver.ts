@@ -27,7 +27,7 @@ export class DisputeResolver {
   @Query(() => [Dispute])
   @UseMiddleware(isAuthenticated)
   async disputes(@Ctx() { user }: GraphQLContext): Promise<Dispute[]> {
-    return prisma.dispute.findMany({
+    const disputes = await prisma.dispute.findMany({
       where: {
         OR: [
           { initiatorId: user?.id },
@@ -40,12 +40,26 @@ export class DisputeResolver {
         ],
       },
       include: {
-        transaction: true,
+        transaction: {
+          include: {
+            buyer: true,
+            seller: true,
+          },
+        },
         initiator: true,
         moderator: true,
         evidence: true,
       },
     });
+
+    return disputes.map(dispute => ({
+      ...dispute,
+      transaction: dispute.transaction ? {
+        ...dispute.transaction,
+        buyer: dispute.transaction.buyer,
+        seller: dispute.transaction.seller,
+      } : undefined
+    }));
   }
 
 @Query(() => Dispute)
@@ -73,21 +87,35 @@ async dispute(
     throw new Error("Dispute not found");
   }
 
-  // Check if user is admin or manager (full access)
-  const allowedRoles = [AccountType.ADMIN, AccountType.MANAGER];
-  const isAuthorizedRole = user?.accountType && allowedRoles.includes(user.accountType as any);
+    if (!dispute.transaction) {
+      throw new Error("Transaction not found for this dispute");
+    }
 
-  // Check if user is directly involved in the dispute
-  const hasDirectAccess = [
-    dispute.initiatorId,
-    dispute.moderatorId,
-    dispute.transaction.buyerId,
-    dispute.transaction.sellerId,
-  ].includes(user?.id as string);
+    // Check if user is admin or manager (full access)
+    const allowedRoles = [AccountType.ADMIN, AccountType.MANAGER];
+    const isAuthorizedRole = user?.accountType && allowedRoles.includes(user.accountType as any);
 
-  // User must either have an authorized role OR be directly involved
-  if (!isAuthorizedRole && !hasDirectAccess) {
-    throw new Error("Unauthorized access to dispute");
+    // Check if user is directly involved in the dispute
+    const hasDirectAccess = [
+      dispute.initiatorId,
+      dispute.moderatorId,
+      dispute.transaction.buyerId,
+      dispute.transaction.sellerId,
+    ].includes(user?.id as string);
+
+    // User must either have an authorized role OR be directly involved
+    if (!isAuthorizedRole && !hasDirectAccess) {
+      throw new Error("Unauthorized access to dispute");
+    }
+
+    return {
+      ...dispute,
+      transaction: {
+        ...dispute.transaction,
+        buyer: dispute.transaction.buyer,
+        seller: dispute.transaction.seller,
+      }
+    };
   }
 
   return dispute;
@@ -154,7 +182,7 @@ async dispute(
       return createdDispute;
     });
 
-    return dispute;
+    return dispute as Dispute;
   }
 
   @Mutation(() => Dispute)
@@ -165,11 +193,22 @@ async dispute(
   ): Promise<Dispute> {
     const dispute = await prisma.dispute.findUnique({
       where: { id: input.disputeId },
-      include: { transaction: true },
+      include: { 
+        transaction: {
+          include: {
+            buyer: true,
+            seller: true,
+          },
+        },
+      },
     });
 
     if (!dispute) {
       throw new Error("Dispute not found");
+    }
+
+    if (!dispute.transaction) {
+      throw new Error("Transaction not found for this dispute");
     }
 
     if (
@@ -186,7 +225,7 @@ async dispute(
       throw new Error("Cannot add evidence to a closed dispute");
     }
 
-    return prisma.dispute.update({
+    const updatedDispute = await prisma.dispute.update({
       where: { id: input.disputeId },
       data: {
         evidence: {
@@ -199,12 +238,26 @@ async dispute(
         },
       },
       include: {
-        transaction: true,
+        transaction: {
+          include: {
+            buyer: true,
+            seller: true,
+          },
+        },
         initiator: true,
         moderator: true,
         evidence: true,
       },
     });
+
+    return {
+      ...updatedDispute,
+      transaction: {
+        ...updatedDispute.transaction!,
+        buyer: updatedDispute.transaction!.buyer,
+        seller: updatedDispute.transaction!.seller,
+      },
+    };
   }
 
   @Mutation(() => Dispute)
@@ -213,20 +266,38 @@ async dispute(
     @Arg("input") input: ResolveDisputeInput,
     @Ctx() { user }: GraphQLContext
   ): Promise<Dispute> {
+    // First get the dispute with all necessary relations
     const dispute = await prisma.dispute.findUnique({
       where: { id: input.disputeId },
-      include: { transaction: true },
+      include: { 
+        transaction: {
+          include: {
+            buyer: true,
+            seller: true,
+          },
+        },
+        initiator: true,
+        moderator: true,
+        evidence: true,
+      },
     });
 
     if (!dispute) {
       throw new Error("Dispute not found");
     }
 
+    if (!dispute.transaction) {
+      throw new Error("Transaction not found for this dispute");
+    }
+
     if (dispute.status === DisputeStatus.CLOSED) {
       throw new Error("Dispute is already closed");
     }
 
+    const { buyerId, sellerId, transactionCode } = dispute.transaction;
+
     const updatedDispute = await prisma.$transaction(async (tx) => {
+      // Update the dispute status and resolution
       const resolved = await tx.dispute.update({
         where: { id: input.disputeId },
         data: {
@@ -236,27 +307,33 @@ async dispute(
           moderatorId: user?.id,
         },
         include: {
-          transaction: true,
+          transaction: {
+            include: {
+              buyer: true,
+              seller: true,
+            },
+          },
           initiator: true,
           moderator: true,
           evidence: true,
         },
       });
 
+      // Create notifications for both parties
       await tx.notification.createMany({
         data: [
           {
-            userId: dispute.transaction.buyerId,
+            userId: buyerId,
             title: "Dispute Resolution",
-            message: `The dispute for transaction ${dispute.transaction.transactionCode} has been resolved`,
+            message: `The dispute for transaction ${transactionCode} has been resolved`,
             type: NotificationType.DISPUTE,
             relatedEntityId: dispute.id,
             relatedEntityType: "Dispute",
           },
           {
-            userId: dispute.transaction.sellerId,
+            userId: sellerId,
             title: "Dispute Resolution",
-            message: `The dispute for transaction ${dispute.transaction.transactionCode} has been resolved`,
+            message: `The dispute for transaction ${transactionCode} has been resolved`,
             type: NotificationType.DISPUTE,
             relatedEntityId: dispute.id,
             relatedEntityType: "Dispute",
@@ -264,9 +341,17 @@ async dispute(
         ],
       });
 
-      return resolved;
+      // Ensure we're returning the correct shape that matches the Dispute type
+      return {
+        ...resolved,
+        transaction: resolved.transaction ? {
+          ...resolved.transaction,
+          buyer: resolved.transaction.buyer,
+          seller: resolved.transaction.seller,
+        } : undefined
+      };
     });
 
-    return updatedDispute;
+    return updatedDispute as Dispute;
   }
 }
