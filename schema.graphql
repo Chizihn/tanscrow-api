@@ -528,6 +528,7 @@ type Query {
   getAllUsers(limit: Float, page: Float): [User!]!
   getAuditLogs(filter: AuditLogFilter, skip: Int, take: Int): AuditLogConnection!
   getBankWithdrawals: [BankWithdrawal!]!
+  getChatByParticipants(participantIds: [String!]!): Chat
   getFilteredDisputes(filter: DisputeFilterInput!): [Dispute!]!
   getFilteredTransactions(filter: TransactionFilterInput!): [Transaction!]!
   getFilteredWithdrawals(filter: WithdrawalFilterInput!): [WalletTransaction!]!

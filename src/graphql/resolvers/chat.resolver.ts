@@ -18,6 +18,8 @@ import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { Message } from "../types/message.type";
 
+
+
 const SUBSCRIPTION_TOPICS = {
   NEW_MESSAGE: "NEW_MESSAGE",
   CHAT_UPDATED: "CHAT_UPDATED",
@@ -68,18 +70,26 @@ export class ChatSubscriptionResolver {
         where: { id: chatId },
         include: {
           messages: true,
+          participants: true
         },
       });
 
       if (!updatedChat) {
         throw new Error("Chat not found");
       }
+      const otherParticipant = updatedChat.participants.find(p => p.id !== context.user!.id);
 
       // Publish subscription event
-      await this.pubSub.publish(
-        `${SUBSCRIPTION_TOPICS.CHAT_UPDATED}_${context.user.id}`,
-        { chatUpdates: { chat: updatedChat, type: "CHAT_UPDATED" } }
-      );
+ await this.pubSub.publish(
+  `${SUBSCRIPTION_TOPICS.CHAT_UPDATED}_${context.user.id}`,
+  {
+    chatUpdates: {
+      chat: updatedChat,
+      type: "CHAT_UPDATED",
+      otherUser: otherParticipant || null
+    }
+  }
+);
 
       return true;
     } catch (error) {
@@ -89,26 +99,33 @@ export class ChatSubscriptionResolver {
   }
 
   // Subscriptions
-  @Subscription(() => MessageSubscriptionPayload, {
-    topics: ({ args }) => `${SUBSCRIPTION_TOPICS.NEW_MESSAGE}_${args.chatId}`,
-  })
-  messageUpdates(
-    @Arg("chatId") chatId: string,
-    @Root() payload: MessageSubscriptionPayload
-  ): MessageSubscriptionPayload {
-    return payload;
+@Subscription(() => MessageSubscriptionPayload, {
+  topics: ({ args }) => `${SUBSCRIPTION_TOPICS.NEW_MESSAGE}_${args.chatId}`,
+  filter: ({ payload, args }) => {
+    // Ensure the message is for the requested chat
+    return payload.chatId === args.chatId;
+  }
+})
+messageUpdates(
+  @Arg("chatId") chatId: string,
+  @Root() payload: MessageSubscriptionPayload
+): MessageSubscriptionPayload {
+  return payload;
+}
+
+@Subscription(() => ChatSubscriptionPayload, {
+  topics: ({ context }) => `${SUBSCRIPTION_TOPICS.CHAT_UPDATED}_${context.userId}`,
+})
+chatUpdates(@Root() root: any): ChatSubscriptionPayload {
+  console.log("RAW @Root():", root); // ← ADD THIS
+
+  if (!root?.chatUpdates) {
+    console.error("chatUpdates payload missing! Published wrong shape:", root);
+    throw new Error("Invalid subscription payload");
   }
 
-  @Subscription(() => ChatSubscriptionPayload, {
-    topics: ({ context }) =>
-      `${SUBSCRIPTION_TOPICS.CHAT_UPDATED}_${context.userId}`,
-  })
-  chatUpdates(
-    // @Ctx() context: Context,
-    @Root() payload: ChatSubscriptionPayload
-  ): ChatSubscriptionPayload {
-    return payload;
-  }
+  return root.chatUpdates;
+}
 
   @Subscription(() => TypingPayload, {
     topics: ({ args }) => `${SUBSCRIPTION_TOPICS.USER_TYPING}_${args.chatId}`,
@@ -128,11 +145,11 @@ export class ChatSubscriptionResolver {
   // Mutations that trigger subscriptions
   @Mutation(() => Message)
   async sendMessage(
+    @Ctx() { user }: GraphQLContext,
     @Arg("chatId") chatId: string,
     @Arg("content", { nullable: true }) content: string,
     @Arg("attachmentIds", () => [String], { defaultValue: [] })
-    attachmentIds: string[],
-    @Ctx() { user }: GraphQLContext
+    attachmentIds?: string[],
   ): Promise<Message> {
     // Create the message
     const message = await prisma.message.create({
@@ -141,7 +158,7 @@ export class ChatSubscriptionResolver {
         senderId: user?.id as string,
         content,
         attachments: {
-          connect: attachmentIds.map((id) => ({ id })),
+          connect: attachmentIds?.map((id) => ({ id })),
         },
       },
       include: {
@@ -272,15 +289,18 @@ export class ChatSubscriptionResolver {
   
     // Notify both participants about the new chat
     const participantIds = [user.id, participantId];
-    for (const id of participantIds) {
-      await this.pubSub.publish(
-        `${SUBSCRIPTION_TOPICS.CHAT_UPDATED}_${id}`,
-        {
-          chat,
-          type: "CHAT_CREATED",
-        }
-      );
+   for (const id of participantIds) {
+  await this.pubSub.publish(
+    `${SUBSCRIPTION_TOPICS.CHAT_UPDATED}_${id}`,
+    {
+      chatUpdates: {
+        chat,
+        type: "CHAT_CREATED",
+        otherUser: id === user.id ? participant : user  // ← the other person
+      }
     }
+  );
+}
   
     return chat;
   }
@@ -414,4 +434,73 @@ async myChats(@Ctx() { user }: GraphQLContext): Promise<Chat[]> {
 
     return chat;
   }
+
+   @Query(() => Chat, { nullable: true })
+async getChatByParticipants(
+  @Arg("participantIds", () => [String]) participantIds: string[],
+  @Ctx() context: GraphQLContext
+): Promise<Chat | null> {
+  if (!context.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  // Ensure the current user is one of the participants
+  if (!participantIds.includes(context.user.id)) {
+    throw new Error("You must be a participant in the chat");
+  }
+
+  try {
+    // Find existing chat with exactly these participants
+    const existingChat = await prisma.chat.findFirst({
+      where: {
+        AND: [
+          {
+            participants: {
+              every: {
+                id: { in: participantIds }
+              }
+            }
+          },
+          {
+            participants: {
+              none: {
+                id: { notIn: participantIds }
+              }
+            }
+          }
+        ]
+      },
+      include: {
+        participants: true,
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: {
+            sender: true
+          }
+        }
+      }
+    });
+
+    if (!existingChat) {
+      return null; // No chat exists
+    }
+
+    // Format the last message if it exists
+    const lastMessage = existingChat.messages[0] ? {
+      content: existingChat.messages[0].content,
+      sender: existingChat.messages[0].sender,
+      isRead: existingChat.messages[0].isRead,
+      createdAt: existingChat.messages[0].createdAt
+    } : null;
+
+    return {
+      ...existingChat,
+      lastMessage
+    };
+  } catch (error) {
+    console.error('Error in getChatByParticipants:', error);
+    throw new Error('Failed to get chat');
+  }
+}
 }

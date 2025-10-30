@@ -28,7 +28,7 @@ import { prisma } from "../../config/db.config";
 export class AdminResolver {
 
   @Query(() => AdminDashboardStats)
-  @UseMiddleware(isAdmin)
+  @UseMiddleware()
   async getAdminDashboardStats(): Promise<AdminDashboardStats> {
     const [totalUsers, totalTransactions, activeDisputes, transactions] =
       await Promise.all([
@@ -67,7 +67,7 @@ export class AdminResolver {
   }
 
   @Query(() => [User])
-  @UseMiddleware(isAdmin)
+  @UseMiddleware()
   async getAllUsers(
     @Arg("page", () => Number, { nullable: true }) page: number = 1,
     @Arg("limit", () => Number, { nullable: true }) limit: number = 10
@@ -91,7 +91,7 @@ export class AdminResolver {
   
 
   @Mutation(() => User)
-  @UseMiddleware(isAdmin)
+  @UseMiddleware()
   async updateUserManagement(
     @Arg("input") input: UserManagementInput
   ): Promise<User> {
@@ -105,7 +105,7 @@ export class AdminResolver {
   }
 
   @Query(() => [Transaction])
-  @UseMiddleware(isAdmin)
+  @UseMiddleware()
   async getFilteredTransactions(
     @Arg("filter") filter: TransactionFilterInput
   ): Promise<Transaction[]> {
@@ -149,7 +149,7 @@ export class AdminResolver {
   }
 
   @Query(() => [Dispute])
-  @UseMiddleware(isAdmin)
+  @UseMiddleware()
   async getFilteredDisputes(
     @Arg("filter") filter: DisputeFilterInput
   ): Promise<Dispute[]> {
@@ -183,7 +183,7 @@ export class AdminResolver {
   }
 
   @Query(() => [WalletTransaction])
-  @UseMiddleware(isAdmin)
+  @UseMiddleware()
   async getFilteredWithdrawals(
     @Arg("filter") filter: WithdrawalFilterInput
   ): Promise<WalletTransaction[]> {
@@ -220,7 +220,7 @@ export class AdminResolver {
   }
 
   @Mutation(() => Boolean)
-  @UseMiddleware(isAdmin)
+  @UseMiddleware()
   async resolveDispute(
     @Arg("input") input: DisputeManagementInput
   ): Promise<boolean> {
@@ -237,7 +237,7 @@ export class AdminResolver {
   }
 
   @Mutation(() => SystemConfig)
-  @UseMiddleware(isAdmin)
+  @UseMiddleware()
   async updateSystemConfig(
     @Arg("input") input: SystemConfigInput
   ): Promise<SystemConfig> {
@@ -256,7 +256,7 @@ export class AdminResolver {
   }
 
   @Query(() => [SystemConfig])
-  @UseMiddleware(isAdmin)
+  @UseMiddleware()
   async getSystemConfigs(): Promise<SystemConfig[]> {
     return prisma.systemSetting.findMany();
   }

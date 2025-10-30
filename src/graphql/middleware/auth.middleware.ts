@@ -53,8 +53,12 @@ export const isManager: MiddlewareFn<GraphQLContext> = async (
   { context },
   next
 ) => {
-  if (!context.user || context.user.accountType !== AccountType.MANAGER) {
-    throw new Error("Not authorized. You are not an admin!");
+  if (
+    !context.user || 
+    (context.user.accountType !== AccountType.MANAGER && 
+     context.user.accountType !== AccountType.SUPERADMIN)
+  ) {
+    throw new Error("Not authorized. You are not a manager!");
   }
   return next();
 };
@@ -63,7 +67,11 @@ export const isAdmin: MiddlewareFn<GraphQLContext> = async (
   { context },
   next
 ) => {
-  if (!context.user || context.user.accountType !== AccountType.ADMIN) {
+  if (
+    !context.user || 
+    (context.user.accountType !== AccountType.ADMIN && 
+     context.user.accountType !== AccountType.SUPERADMIN)
+  ) {
     throw new Error("Not authorized. You are not an admin!");
   }
   return next();
