@@ -55,8 +55,8 @@ export class SubmitVerificationDocumentInput {
   @Field(() => String)
   documentNumber!: string;
 
-  @Field(() => String)
-  documentUrl!: string;
+  @Field(() => String, { nullable: true })
+  documentUrl?: string;
 }
 
 @InputType()

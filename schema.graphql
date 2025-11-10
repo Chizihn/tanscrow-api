@@ -676,7 +676,7 @@ input SignupWithPhoneInput {
 input SubmitVerificationDocumentInput {
   documentNumber: String!
   documentType: DocumentType!
-  documentUrl: String!
+  documentUrl: String
 }
 
 type Subscription {
