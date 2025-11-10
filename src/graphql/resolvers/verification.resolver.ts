@@ -54,6 +54,7 @@ export class VerificationResolver {
         ...input,
         userId: user?.id as string,
         verificationStatus: VerificationStatus.PENDING,
+        documentUrl: input.documentUrl || null
       },
     });
 

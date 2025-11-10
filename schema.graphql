@@ -906,7 +906,7 @@ type VerificationDocument {
   createdAt: DateTimeISO!
   documentNumber: String!
   documentType: DocumentType!
-  documentUrl: String!
+  documentUrl: String
   id: String!
   rejectionReason: String
   submittedAt: DateTimeISO!
