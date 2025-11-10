@@ -74,7 +74,7 @@ model VerificationDocument {
   userId             String
   documentType       DocumentType
   documentNumber     String
-  documentUrl        String
+  documentUrl        String?
   verificationStatus VerificationStatus @default(PENDING)
   submittedAt        DateTime           @default(now())
   verifiedAt         DateTime?
