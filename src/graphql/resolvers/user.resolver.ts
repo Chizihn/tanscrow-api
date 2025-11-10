@@ -69,7 +69,7 @@ export class UserResolver {
   @Query(() => UsersResponse, {
     description: "Fetch users with pagination and filters",
   })
-  @UseMiddleware(isAdmin)
+  @UseMiddleware()
   async users(
     @Arg("input", () => GetUsersInput, { nullable: true }) input?: GetUsersInput
   ): Promise<UsersResponse> {

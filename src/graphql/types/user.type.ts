@@ -131,6 +131,12 @@ export class User {
 
   @Field(() => [Review], { nullable: true })
   reviewsGiven?: Review[];
+
+  @Field(() => Boolean, { nullable: true })
+  isOnline?: boolean;
+
+  @Field(() => Date, { nullable: true })
+  lastActiveAt?: Date;
 }
 
 @InputType()

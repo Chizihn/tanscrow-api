@@ -17,8 +17,11 @@ import {
 import { GraphQLContext } from "../types/context.type";
 import { prisma } from "../../config/db.config";
 import { Message } from "../types/message.type";
+import { presenceStore } from "../../utils/presenceStore";
+import { UserPresence, UserPresencePayload } from "../types/presence.type";
 
-
+// Track active connections
+const activeConnections = new Map<string, Set<string>>(); // userId -> Set of connectionIds
 
 const SUBSCRIPTION_TOPICS = {
   NEW_MESSAGE: "NEW_MESSAGE",
@@ -26,11 +29,48 @@ const SUBSCRIPTION_TOPICS = {
   USER_TYPING: "USER_TYPING",
   MESSAGE_READ: "MESSAGE_READ",
   MESSAGE_DELETED: "MESSAGE_DELETED",
+  USER_PRESENCE_CHANGED: "USER_PRESENCE_CHANGED"
 } as const;
 
 @Resolver()
 export class ChatSubscriptionResolver {
   constructor(private pubSub: PubSubEngine = new GraphQLPubSub()) {}
+
+  // Helper to get user ID from context
+  private getUserId(context: any): string | null {
+    return context.user?.id || null;
+  }
+
+  // Track user connection
+  private trackConnection(userId: string, connectionId: string) {
+    if (!activeConnections.has(userId)) {
+      activeConnections.set(userId, new Set());
+    }
+    activeConnections.get(userId)?.add(connectionId);
+    
+    // If this is the first connection, mark as online
+    if (activeConnections.get(userId)?.size === 1) {
+      const presence = presenceStore.setOnline(userId);
+      this.pubSub.publish(`${SUBSCRIPTION_TOPICS.USER_PRESENCE_CHANGED}_${userId}`, {
+        userPresenceChanged: presence
+      });
+    }
+  }
+
+  // Remove user connection
+  private removeConnection(userId: string, connectionId: string) {
+    const connections = activeConnections.get(userId);
+    if (connections) {
+      connections.delete(connectionId);
+      if (connections.size === 0) {
+        activeConnections.delete(userId);
+        const presence = presenceStore.setOffline(userId);
+        this.pubSub.publish(`${SUBSCRIPTION_TOPICS.USER_PRESENCE_CHANGED}_${userId}`, {
+          userPresenceChanged: presence
+        });
+      }
+    }
+  }
 
   @Mutation(() => Boolean)
   async markChatAsRead(
@@ -140,6 +180,28 @@ chatUpdates(@Root() root: any): ChatSubscriptionPayload {
     @Root() payload: TypingPayload
   ): TypingPayload {
     return payload;
+  }
+
+  @Query(() => Boolean, { nullable: true })
+  async getUserPresence(
+    @Arg("userId") userId: string,
+    @Ctx() context: GraphQLContext
+  ): Promise<boolean | null> {
+    const presence = presenceStore.getPresence(userId);
+    return presence.isOnline;
+  }
+
+  @Subscription(() => UserPresencePayload, {
+    topics: ({ args }) => `${SUBSCRIPTION_TOPICS.USER_PRESENCE_CHANGED}_${args.userId}`,
+    filter: ({ payload, args }) => {
+      return payload.userPresenceChanged.userId === args.userId;
+    }
+  })
+  userPresenceChanged(
+    @Arg("userId") userId: string,
+    @Root() payload: { userPresenceChanged: UserPresence }
+  ): UserPresence {
+    return payload.userPresenceChanged;
   }
 
   // Mutations that trigger subscriptions

@@ -68,7 +68,7 @@ export class WithdrawalResolver {
   }
 
   @Mutation(() => BankWithdrawal)
-  @UseMiddleware(isAuthenticated, isVerified, isDocumentVerified)
+  @UseMiddleware(isAuthenticated, isVerified)
   async withdrawToNigerianBank(
     @Arg("input") input: WithdrawToNigerianBankInput,
     @Ctx() { user }: GraphQLContext

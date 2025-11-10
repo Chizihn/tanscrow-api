@@ -535,6 +535,7 @@ type Query {
   getPaymentDetails(reference: String!): JSONObject
   getSellerReviews(sellerId: String!): [Review!]!
   getSystemConfigs: [SystemConfig!]!
+  getUserPresence(userId: String!): Boolean
 
   """Get current user"""
   me: User
@@ -681,6 +682,7 @@ input SubmitVerificationDocumentInput {
 type Subscription {
   chatUpdates: ChatSubscriptionPayload!
   messageUpdates(chatId: String!): MessageSubscriptionPayload!
+  userPresenceChanged(userId: String!): UserPresencePayload!
   userTyping(chatId: String!): TypingPayload!
 }
 
@@ -815,6 +817,8 @@ type User {
   email: String
   firstName: String!
   id: ID!
+  isOnline: Boolean
+  lastActiveAt: DateTimeISO
   lastName: String!
   phoneNumber: String
   profileImageUrl: String
@@ -869,6 +873,16 @@ input UserManagementInput {
   accountType: String
   userId: ID!
   verified: Boolean
+}
+
+type UserPresence {
+  isOnline: Boolean!
+  lastSeen: DateTimeISO!
+  userId: String!
+}
+
+type UserPresencePayload {
+  userPresenceChanged: UserPresence!
 }
 
 type UserWalletSummary {
